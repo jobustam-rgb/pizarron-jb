@@ -1,0 +1,2120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Pizarra · Johni Bustamante v1</title>
+
+  <!-- ===== PWA: manifest, ícono y color de tema ===== -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#1a2634">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pizarrón JB">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    /* ===== ESTILOS COMPLETOS ===== */
+    * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
+    body {
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+      touch-action: none;
+    }
+    .pizarra-wrapper {
+      background: #ffffff;
+      border-radius: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.05);
+      padding: 12px;
+      display: inline-block;
+      position: relative;
+    }
+    .barra-superior {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(8px);
+      border-radius: 40px;
+      padding: 6px 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      border: 1px solid rgba(255,255,255,0.5);
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 20;
+      pointer-events: auto;
+    }
+    .barra-superior .btn-icon {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      border-radius: 40px;
+      color: #3a3f4b;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+    }
+    .barra-superior .btn-icon:hover { background: rgba(0,0,0,0.06); transform: scale(1.05); }
+    .barra-superior .btn-icon:active { transform: scale(0.92); }
+    .barra-superior .btn-icon.activo {
+      background: #d0d9e8;
+      color: #1a2634;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .barra-superior .btn-icon:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .barra-superior .separador-vertical {
+      width: 1px;
+      height: 24px;
+      background: #d0d7e2;
+      margin: 0 2px;
+    }
+    .pizarra-container {
+      position: relative;
+      width: 1200px;
+      height: 700px;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #fafafa;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.04);
+      touch-action: none;
+      margin-top: 10px;
+    }
+    .pizarra-viewport {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transform-origin: 0 0;
+      transition: transform 0.1s ease-out;
+      will-change: transform;
+    }
+    .pizarra-viewport canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 20px;
+      touch-action: none;
+      pointer-events: none;
+    }
+    #canvasFondo {
+      background: transparent;
+      z-index: 0;
+      pointer-events: none;
+    }
+    #canvasPrincipal {
+      background: transparent;
+      z-index: 1;
+      pointer-events: auto;
+    }
+    #canvasTemporal {
+      background: transparent;
+      z-index: 2;
+      pointer-events: none;
+    }
+    #canvasGrid {
+      background: transparent;
+      z-index: 3;
+      pointer-events: none;
+      opacity: 0.5;
+      display: none;
+    }
+    .barra-lateral {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(8px);
+      border-radius: 28px;
+      padding: 10px 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+      border: 1px solid rgba(255,255,255,0.5);
+      touch-action: none;
+      width: 48px;
+    }
+    .barra-lateral .btn-icon {
+      width: 34px;
+      height: 34px;
+      border: none;
+      background: transparent;
+      border-radius: 40px;
+      color: #3a3f4b;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+      flex-shrink: 0;
+    }
+    .barra-lateral .btn-icon:hover { background: rgba(0,0,0,0.06); transform: scale(1.02); }
+    .barra-lateral .btn-icon:active { transform: scale(0.92); }
+    .barra-lateral .btn-icon.activo {
+      background: #d0d9e8;
+      color: #1a2634;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .barra-lateral .separador {
+      width: 26px;
+      height: 1px;
+      background: #d0d7e2;
+      margin: 4px 0;
+      flex-shrink: 0;
+    }
+    .grupo-herramientas {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+    }
+    .grupo-herramientas .toggle-grupo {
+      background: transparent;
+      border: none;
+      color: #6a7a8a;
+      font-size: 12px;
+      cursor: pointer;
+      touch-action: manipulation;
+      padding: 2px 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 2px;
+    }
+    .grupo-herramientas .toggle-grupo:hover { color: #1a2634; }
+    .grupo-herramientas.contraido .toggle-grupo i:first-child { transform: rotate(-90deg); }
+    .grupo-herramientas.contraido .iconos-grupo { display: none; }
+    .grupo-herramientas .iconos-grupo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+    .floating-panel {
+      display: none;
+      position: fixed;
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(8px);
+      border-radius: 16px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.5);
+      min-width: 140px;
+      z-index: 999;
+      flex-direction: column;
+      gap: 8px;
+      touch-action: auto;
+      pointer-events: auto;
+    }
+    .floating-panel.visible { display: flex; }
+    .floating-panel .grupo-colores {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .floating-panel .color-swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: 0.2s;
+      touch-action: manipulation;
+    }
+    .floating-panel .color-swatch:hover { transform: scale(1.15); }
+    .floating-panel .color-swatch.seleccionado {
+      border-color: #1a2634;
+      box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1a2634;
+    }
+    .floating-panel .grosor-group {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    .floating-panel .grosor-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 2px solid #d0d7e2;
+      background: transparent;
+      color: #1a2634;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: 0.15s;
+      touch-action: manipulation;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .floating-panel .grosor-btn:hover { background: #eef2f7; }
+    .floating-panel .grosor-btn.seleccionado {
+      border-color: #1a2634;
+      background: #d0d9e8;
+    }
+    #btnCopiarCP.modo-copiar {
+      background: #2d8f4a !important;
+      color: #fff !important;
+      border-color: #1a5a2a !important;
+      box-shadow: 0 0 0 2px rgba(45,143,74,0.5) !important;
+    }
+    .firma {
+      position: absolute;
+      bottom: 12px;
+      right: 20px;
+      z-index: 20;
+      font-size: 13px;
+      color: #8a96a8;
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(4px);
+      padding: 4px 14px;
+      border-radius: 30px;
+      border: 1px solid rgba(255,255,255,0.5);
+      pointer-events: none;
+    }
+    @media (max-width: 1260px) { .pizarra-wrapper { transform: scale(0.8); } }
+    @media (max-width: 1000px) { .pizarra-wrapper { transform: scale(0.6); } }
+  </style>
+</head>
+<body>
+<div class="pizarra-wrapper">
+  <!-- BARRA SUPERIOR -->
+  <div class="barra-superior" id="barraSuperior">
+    <button class="btn-icon" id="btnDeshacer" title="Deshacer" disabled><i class="fas fa-undo"></i></button>
+    <div class="separador-vertical"></div>
+    <button class="btn-icon" id="btnRehacer" title="Rehacer" disabled><i class="fas fa-redo"></i></button>
+    <div class="separador-vertical"></div>
+    <button class="btn-icon" id="btnCP" title="Copiar / Pegar / Eliminar"><i class="fas fa-vector-square"></i></button>
+    <div class="separador-vertical"></div>
+    <button class="btn-icon" id="btnLapizTemporal" title="Lápiz temporal (anotación rápida, 4px)"><i class="fas fa-pen-nib"></i></button>
+    <button class="btn-icon" id="btnBorrarTemporal" title="Borrar anotaciones del lápiz temporal"><i class="fas fa-trash"></i></button>
+    <div class="separador-vertical"></div>
+    <button class="btn-icon" id="btnImprimir" title="Imprimir pizarra"><i class="fas fa-print"></i></button>
+    <div class="separador-vertical" id="separadorInstalar" style="display:none;"></div>
+    <button class="btn-icon" id="btnInstalarApp" title="Instalar como aplicación" style="display:none;"><i class="fas fa-download"></i></button>
+  </div>
+
+  <div class="pizarra-container" id="pizarraContainer">
+    <div class="pizarra-viewport" id="viewport">
+      <canvas id="canvasFondo" width="1200" height="700"></canvas>
+      <canvas id="canvasPrincipal" width="1200" height="700"></canvas>
+      <canvas id="canvasTemporal" width="1200" height="700"></canvas>
+      <canvas id="canvasGrid" width="1200" height="700"></canvas>
+    </div>
+
+    <!-- BARRA LATERAL -->
+    <div class="barra-lateral" id="barraLateral">
+      <!-- GRUPO 1: Dibujo -->
+      <div class="grupo-herramientas" id="grupo1">
+        <button class="toggle-grupo" id="toggleGrupo1"><i class="fas fa-chevron-down"></i> <i class="fas fa-paint-brush" style="font-size:12px;"></i></button>
+        <div class="iconos-grupo">
+          <button class="btn-icon activo" id="btnLapiz" data-herramienta="lapiz"><i class="fas fa-pencil-alt"></i></button>
+          <button class="btn-icon" id="btnResaltador" data-herramienta="resaltador"><i class="fas fa-highlighter"></i></button>
+          <button class="btn-icon" id="btnLinea" data-herramienta="linea"><i class="fas fa-minus"></i></button>
+          <button class="btn-icon" id="btnRectangulo" data-herramienta="rectangulo"><i class="fas fa-border-all"></i></button>
+          <button class="btn-icon" id="btnSeleccion" data-herramienta="seleccionar"><i class="fas fa-hand-pointer"></i></button>
+        </div>
+      </div>
+      <div class="separador"></div>
+      <!-- GRUPO 2: Configuración -->
+      <div class="grupo-herramientas" id="grupo2">
+        <button class="toggle-grupo" id="toggleGrupo2"><i class="fas fa-chevron-down"></i> <i class="fas fa-cog" style="font-size:12px;"></i></button>
+        <div class="iconos-grupo">
+          <button class="btn-icon" id="btnFondo" data-herramienta="fondo"><i class="fas fa-palette"></i></button>
+          <button class="btn-icon" id="btnGrid" data-herramienta="grid"><i class="fas fa-th"></i></button>
+          <button class="btn-icon" id="btnMover" data-herramienta="mover"><i class="fas fa-arrows-alt"></i></button>
+          <button class="btn-icon" id="btnZoomIn"><i class="fas fa-plus-circle"></i></button>
+          <button class="btn-icon" id="btnZoomOut"><i class="fas fa-minus-circle"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANELES FLOTANTES -->
+    <div class="floating-panel" id="panelLapiz">
+      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">COLOR</div>
+      <div class="grupo-colores" id="coloresLapiz">
+        <span class="color-swatch seleccionado" style="background:#1a1a1a;" data-color="#1a1a1a"></span>
+        <span class="color-swatch" style="background:#ffffff; border-color:#ccc;" data-color="#ffffff"></span>
+        <span class="color-swatch" style="background:#2563eb;" data-color="#2563eb"></span>
+        <span class="color-swatch" style="background:#dc2626;" data-color="#dc2626"></span>
+        <span class="color-swatch" style="background:#16a34a;" data-color="#16a34a"></span>
+        <span class="color-swatch" style="background:#e67e22;" data-color="#e67e22"></span>
+        <span class="color-swatch" style="background:#9333ea;" data-color="#9333ea"></span>
+      </div>
+      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em; margin-top:4px;">GROSOR</div>
+      <div class="grosor-group" id="grosorLapiz">
+        <button class="grosor-btn seleccionado" data-size="3">3</button>
+        <button class="grosor-btn" data-size="5">5</button>
+        <button class="grosor-btn" data-size="8">8</button>
+      </div>
+    </div>
+
+    <div class="floating-panel" id="panelResaltador">
+      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">COLOR</div>
+      <div class="grupo-colores" id="coloresResaltador">
+        <span class="color-swatch seleccionado" style="background:#fff9c4;" data-color="#fff9c4"></span>
+        <span class="color-swatch" style="background:#d2b48c;" data-color="#d2b48c"></span>
+        <span class="color-swatch" style="background:#cccccc;" data-color="#cccccc"></span>
+      </div>
+      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em; margin-top:4px;">GROSOR</div>
+      <div class="grosor-group" id="grosorResaltador">
+        <button class="grosor-btn seleccionado" data-size="15">15</button>
+        <button class="grosor-btn" data-size="30">30</button>
+        <button class="grosor-btn" data-size="45">45</button>
+      </div>
+    </div>
+
+    <div class="floating-panel" id="panelFondo">
+      <div class="grupo-colores" id="coloresFondo">
+        <span class="color-swatch seleccionado" style="background:#ffffff;" data-color="#ffffff"></span>
+        <span class="color-swatch" style="background:#f0f0f0;" data-color="#f0f0f0"></span>
+        <span class="color-swatch" style="background:#fce4b8;" data-color="#fce4b8"></span>
+        <span class="color-swatch" style="background:#d9e8f5;" data-color="#d9e8f5"></span>
+        <span class="color-swatch" style="background:#c8e6c9;" data-color="#c8e6c9"></span>
+        <span class="color-swatch" style="background:#000000;" data-color="#000000"></span>
+      </div>
+    </div>
+
+    <!-- PANEL LÁPIZ TEMPORAL -->
+    <div class="floating-panel" id="panelLapizTemporal">
+      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">LÁPIZ TEMPORAL · 4px</div>
+      <div class="grupo-colores" id="coloresLapizTemporal">
+        <span class="color-swatch seleccionado" style="background:#E34234;" data-color="#E34234" title="Bermellón"></span>
+        <span class="color-swatch" style="background:#3F51B5;" data-color="#3F51B5" title="Azul índigo"></span>
+        <span class="color-swatch" style="background:#01796F;" data-color="#01796F" title="Verde pino"></span>
+      </div>
+    </div>
+
+    <!-- PANEL CP (4 puntos) -->
+    <div class="floating-panel" id="panelSeleccionCP" style="min-width:160px; pointer-events:auto;">
+      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">ACCIONES</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+        <button class="btn-icon" id="btnCopiarCP" style="width:auto; padding:4px 10px; font-size:0.8rem; pointer-events:auto;"><i class="fas fa-copy"></i> Copiar</button>
+        <button class="btn-icon" id="btnPegarCP" style="width:auto; padding:4px 10px; font-size:0.8rem; pointer-events:auto;"><i class="fas fa-paste"></i> Pegar</button>
+        <button class="btn-icon" id="btnEliminarCP" style="width:auto; padding:4px 10px; font-size:0.8rem; pointer-events:auto;"><i class="fas fa-trash-alt"></i> Eliminar</button>
+      </div>
+    </div>
+
+    <div class="firma">Mat. Edgar Johni Bustamante Romero, Ph.D.</div>
+  </div>
+</div>
+
+<script>
+// ======================================================================
+// MÓDULO 1 – Pizarra (base estable del Mensaje 21)
+// ======================================================================
+const Pizarra = (() => {
+  const contenedor = document.getElementById('pizarraContainer');
+  const viewport = document.getElementById('viewport');
+  const canvasFondo = document.getElementById('canvasFondo');
+  const canvasP = document.getElementById('canvasPrincipal');
+  const canvasT = document.getElementById('canvasTemporal');
+  const canvasGrid = document.getElementById('canvasGrid');
+  const ctxFondo = canvasFondo.getContext('2d');
+  const ctxP = canvasP.getContext('2d');
+  const ctxT = canvasT.getContext('2d');
+  const ctxGrid = canvasGrid.getContext('2d');
+
+  const W = 1200, H = 700;
+  canvasP.width = canvasT.width = canvasGrid.width = canvasFondo.width = W;
+  canvasP.height = canvasT.height = canvasGrid.height = canvasFondo.height = H;
+
+  let zoom = 1;
+  let panX = 0, panY = 0;
+  let isPanning = false;
+  let panStartX = 0, panStartY = 0;
+
+  let capaActiva = 'principal';
+  let herramientaActiva = 'lapiz';
+  let colorActivo = '#1a1a1a';
+  let grosorActivo = 3;
+  let opacidadActivo = 1;
+  let grosorGoma = 8;
+  let tamanoRect = 40;
+  let fondoColor = '#ffffff';
+
+  // ----- HISTORIAL (10 pasos) -----
+  const MAX_HIST = 10;
+  let history = [];
+  let historyIndex = -1;
+
+  function guardarEstado() {
+    const dataUrl = canvasP.toDataURL();
+    if (historyIndex < history.length - 1) {
+      history = history.slice(0, historyIndex + 1);
+    }
+    history.push(dataUrl);
+    if (history.length > MAX_HIST) {
+      history.shift();
+      historyIndex = Math.max(0, historyIndex - 1);
+    }
+    historyIndex = history.length - 1;
+    actualizarBotonesHistorial();
+  }
+
+  function restaurarEstado(index) {
+    if (index < 0 || index >= history.length) return;
+    const dataUrl = history[index];
+    const img = new Image();
+    img.onload = () => {
+      ctxP.clearRect(0, 0, W, H);
+      ctxP.drawImage(img, 0, 0);
+      historyIndex = index;
+      ctxT.clearRect(0, 0, W, H);
+      actualizarBotonesHistorial();
+    };
+    img.src = dataUrl;
+  }
+
+  function deshacer() {
+    if (historyIndex > 0) restaurarEstado(historyIndex - 1);
+  }
+
+  function rehacer() {
+    if (historyIndex < history.length - 1) restaurarEstado(historyIndex + 1);
+  }
+
+  function actualizarBotonesHistorial() {
+    const btnDeshacer = document.getElementById('btnDeshacer');
+    const btnRehacer = document.getElementById('btnRehacer');
+    if (btnDeshacer) btnDeshacer.disabled = (historyIndex <= 0);
+    if (btnRehacer) btnRehacer.disabled = (historyIndex >= history.length - 1);
+  }
+
+  function inicializarHistorial() {
+    const dataUrl = canvasP.toDataURL();
+    history = [dataUrl];
+    historyIndex = 0;
+    actualizarBotonesHistorial();
+  }
+
+  // ----- FIN HISTORIAL -----
+
+  let isDrawing = false;
+  let lastX = 0, lastY = 0;
+  let startX = 0, startY = 0;
+  let gridVisible = false;
+  let resaltadorColor = '#fff9c4';
+  let resaltadorGrosor = 15;
+  const RESALTADOR_OPACIDAD = 0.15;
+
+  // ----- LÁPIZ TEMPORAL (capa efímera, no entra al historial) -----
+  let colorTemporal = '#E34234'; // Bermellón por defecto
+  const GROSOR_TEMPORAL = 4;
+
+  function getCtx() { return capaActiva === 'principal' ? ctxP : ctxT; }
+  function getCanvas() { return capaActiva === 'principal' ? canvasP : canvasT; }
+  function getColorBorrado() { return capaActiva === 'principal' ? fondoColor : '#ffffff'; }
+
+  function limpiarTemporal() { ctxT.clearRect(0, 0, W, H); }
+
+  // ---- FUNCIONES DE DIBUJO (SIN guardarEstado) ----
+  function dibujarPunto(x, y, color, grosor, opacidad) {
+    const ctx = getCtx();
+    ctx.save();
+    ctx.globalAlpha = opacidad;
+    ctx.beginPath();
+    ctx.arc(x, y, grosor/2, 0, Math.PI*2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function dibujarLinea(x1, y1, x2, y2, color, grosor, opacidad) {
+    const ctx = getCtx();
+    ctx.save();
+    ctx.globalAlpha = opacidad;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = grosor;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function dibujarRectangulo(x, y, w, h, color, grosor, opacidad) {
+    const ctx = getCtx();
+    ctx.save();
+    ctx.globalAlpha = opacidad;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = grosor;
+    ctx.strokeRect(x, y, w, h);
+    ctx.restore();
+  }
+
+  function borrarRect(x, y, size) {
+    const ctx = getCtx();
+    ctx.save();
+    ctx.fillStyle = getColorBorrado();
+    ctx.fillRect(x - size/2, y - size/2, size, size);
+    ctx.restore();
+    guardarEstado();
+  }
+
+  function dibujarGridEnCanvas(ctx) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(150,150,150,0.5)';
+    ctx.lineWidth = 0.8;
+    const step = 40;
+    for (let x = 0; x <= W; x += step) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= H; y += step) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function toggleGrid() {
+    gridVisible = !gridVisible;
+    if (gridVisible) {
+      canvasGrid.style.display = 'block';
+      ctxGrid.clearRect(0, 0, W, H);
+      dibujarGridEnCanvas(ctxGrid);
+    } else {
+      canvasGrid.style.display = 'none';
+      ctxGrid.clearRect(0, 0, W, H);
+    }
+    return gridVisible;
+  }
+
+  function setFondo(color) {
+    fondoColor = color;
+    ctxFondo.save();
+    ctxFondo.fillStyle = color;
+    ctxFondo.fillRect(0, 0, W, H);
+    ctxFondo.restore();
+    // Nota: el fondo vive en su propia capa (canvasFondo), independiente
+    // del dibujo (canvasPrincipal). Por eso ya NO se llama a guardarEstado()
+    // aquí: cambiar el color de fondo no altera ni cubre lo dibujado, y no
+    // debe consumir un paso del historial de deshacer/rehacer del dibujo.
+  }
+
+  function actualizarTransform() {
+    viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+  }
+
+  function zoomIn() {
+    zoom = Math.min(3, zoom + 0.1);
+    actualizarTransform();
+  }
+  function zoomOut() {
+    zoom = Math.max(0.3, zoom - 0.1);
+    actualizarTransform();
+  }
+
+  function getCoords(e) {
+    const rect = contenedor.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    let cx, cy;
+    if (e.touches) {
+      cx = e.touches[0].clientX;
+      cy = e.touches[0].clientY;
+      e.preventDefault();
+    } else {
+      cx = e.clientX;
+      cy = e.clientY;
+    }
+    let x = (cx - rect.left) * scaleX;
+    let y = (cy - rect.top) * scaleY;
+    x = (x - panX) / zoom;
+    y = (y - panY) / zoom;
+    return { x, y };
+  }
+
+  // ---- EVENTOS DE PUNTERO ----
+  function onPointerDown(e) {
+    if (herramientaActiva === 'seleccionar' || herramientaActiva === 'cp') return;
+    const { x, y } = getCoords(e);
+    const tool = herramientaActiva;
+
+    if (tool === 'mover') {
+      isPanning = true;
+      const ev = e.touches ? e.touches[0] : e;
+      panStartX = ev.clientX;
+      panStartY = ev.clientY;
+      return;
+    }
+
+    if (tool === 'borradorRect') {
+      borrarRect(x, y, tamanoRect);
+      return;
+    }
+
+    if (tool === 'linea' || tool === 'rectangulo') {
+      isDrawing = true;
+      startX = x; startY = y; lastX = x; lastY = y;
+      ctxT.clearRect(0, 0, W, H);
+      ctxT.drawImage(getCanvas(), 0, 0);
+      return;
+    }
+
+    isDrawing = true;
+    lastX = x; lastY = y; startX = x; startY = y;
+
+    if (tool === 'goma') {
+      const ctx = getCtx();
+      ctx.save();
+      ctx.fillStyle = getColorBorrado();
+      ctx.beginPath();
+      ctx.arc(x, y, grosorGoma/2, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    } else if (tool === 'lapiz') {
+      dibujarPunto(x, y, colorActivo, (capaActiva === 'principal') ? grosorActivo : 3, (capaActiva === 'principal') ? opacidadActivo : 1);
+    } else if (tool === 'resaltador') {
+      dibujarPunto(x, y, resaltadorColor, resaltadorGrosor, RESALTADOR_OPACIDAD);
+    } else if (tool === 'lapizTemporal') {
+      dibujarPunto(x, y, colorTemporal, GROSOR_TEMPORAL, 1);
+    }
+  }
+
+  function onPointerMove(e) {
+    if (herramientaActiva === 'seleccionar' || herramientaActiva === 'cp') return;
+    const { x, y } = getCoords(e);
+    const tool = herramientaActiva;
+
+    if (isPanning) {
+      const ev = e.touches ? e.touches[0] : e;
+      panX += ev.clientX - panStartX;
+      panY += ev.clientY - panStartY;
+      panStartX = ev.clientX;
+      panStartY = ev.clientY;
+      actualizarTransform();
+      return;
+    }
+
+    if (!isDrawing) return;
+
+    if (tool === 'linea' || tool === 'rectangulo') {
+      lastX = x; lastY = y;
+      ctxT.clearRect(0, 0, W, H);
+      ctxT.drawImage(getCanvas(), 0, 0);
+      const grosor = (capaActiva === 'principal') ? grosorActivo : 3;
+      const opacidad = (capaActiva === 'principal') ? opacidadActivo : 1;
+      ctxT.save();
+      ctxT.globalAlpha = opacidad;
+      ctxT.strokeStyle = colorActivo;
+      ctxT.lineWidth = grosor;
+      ctxT.lineCap = 'round';
+      ctxT.lineJoin = 'round';
+      if (tool === 'linea') {
+        ctxT.beginPath();
+        ctxT.moveTo(startX, startY);
+        ctxT.lineTo(x, y);
+        ctxT.stroke();
+      } else {
+        const w = x - startX, h = y - startY;
+        ctxT.strokeRect(startX, startY, w, h);
+      }
+      ctxT.restore();
+      return;
+    }
+
+    if (tool === 'lapiz' || tool === 'resaltador' || tool === 'goma' || tool === 'lapizTemporal') {
+      const ctx = getCtx();
+      if (tool === 'goma') {
+        ctx.save();
+        ctx.strokeStyle = getColorBorrado();
+        ctx.lineWidth = grosorGoma;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        let color, grosor, opacidad;
+        if (tool === 'lapiz') {
+          color = colorActivo;
+          grosor = (capaActiva === 'principal') ? grosorActivo : 3;
+          opacidad = (capaActiva === 'principal') ? opacidadActivo : 1;
+        } else if (tool === 'lapizTemporal') {
+          color = colorTemporal;
+          grosor = GROSOR_TEMPORAL;
+          opacidad = 1;
+        } else {
+          color = resaltadorColor;
+          grosor = resaltadorGrosor;
+          opacidad = RESALTADOR_OPACIDAD;
+        }
+        dibujarLinea(lastX, lastY, x, y, color, grosor, opacidad);
+      }
+      lastX = x; lastY = y;
+    }
+  }
+
+  function onPointerUp(e) {
+    if (herramientaActiva === 'seleccionar' || herramientaActiva === 'cp') return;
+    const tool = herramientaActiva;
+
+    if (isPanning) {
+      isPanning = false;
+      return;
+    }
+
+    if (!isDrawing) {
+      if (tool === 'linea' || tool === 'rectangulo') ctxT.clearRect(0, 0, W, H);
+      return;
+    }
+
+    isDrawing = false;
+
+    if (tool === 'linea' || tool === 'rectangulo') {
+      const ctx = getCtx();
+      const grosor = (capaActiva === 'principal') ? grosorActivo : 3;
+      const opacidad = (capaActiva === 'principal') ? opacidadActivo : 1;
+      ctx.save();
+      ctx.globalAlpha = opacidad;
+      ctx.strokeStyle = colorActivo;
+      ctx.lineWidth = grosor;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      if (tool === 'linea') {
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(lastX, lastY);
+        ctx.stroke();
+      } else {
+        const w = lastX - startX, h = lastY - startY;
+        ctx.strokeRect(startX, startY, w, h);
+      }
+      ctx.restore();
+      ctxT.clearRect(0, 0, W, H);
+      guardarEstado();
+    } else if (tool === 'lapiz' || tool === 'resaltador' || tool === 'goma') {
+      guardarEstado();
+    }
+  }
+
+  function addEvent(el, type, handler) {
+    el.addEventListener(type, handler);
+    if (type === 'mousedown') el.addEventListener('touchstart', handler, { passive: false });
+    if (type === 'mousemove') {
+      window.addEventListener('touchmove', handler, { passive: false });
+      el.addEventListener('touchmove', handler, { passive: false });
+    }
+    if (type === 'mouseup') {
+      window.addEventListener('touchend', handler, { passive: false });
+      el.addEventListener('touchend', handler, { passive: false });
+    }
+  }
+  addEvent(contenedor, 'mousedown', onPointerDown);
+  addEvent(window, 'mousemove', onPointerMove);
+  addEvent(window, 'mouseup', onPointerUp);
+
+  function setHerramienta(tool, capa) {
+    herramientaActiva = tool;
+    capaActiva = capa;
+    canvasT.style.pointerEvents = (capa === 'temporal') ? 'auto' : 'none';
+    canvasP.style.pointerEvents = (capa === 'principal') ? 'auto' : 'none';
+    ctxT.clearRect(0, 0, W, H);
+  }
+
+  function setResaltadorColor(color) { resaltadorColor = color; }
+  function setResaltadorGrosor(grosor) { resaltadorGrosor = grosor; }
+
+  function getTransform() { return { panX, panY, zoom }; }
+  function getColorFondo() { return fondoColor; }
+  function getCanvasPrincipal() { return canvasP; }
+  function getCanvasTemporal() { return canvasT; }
+  function getContenedor() { return contenedor; }
+
+  return {
+    setHerramienta,
+    setColor(c) { colorActivo = c; },
+    setGrosor(v, capa) { if (capa === 'principal') grosorActivo = parseFloat(v); },
+    setOpacidad(v, capa) { if (capa === 'principal') opacidadActivo = parseFloat(v) / 100; },
+    setGrosorGoma(s) { grosorGoma = s; },
+    setTamanoRect(s) { tamanoRect = s; },
+    setResaltadorColor,
+    setResaltadorGrosor,
+    setColorTemporal(c) { colorTemporal = c; },
+    zoomIn,
+    zoomOut,
+    deshacer,
+    rehacer,
+    guardarEstado,
+    limpiarTemporal,
+    toggleGrid,
+    setFondo,
+    getCanvas,
+    ctxT,
+    W,
+    H,
+    getTransform,
+    getColorFondo,
+    getCanvasPrincipal,
+    getCanvasTemporal,
+    getContenedor,
+    actualizarBotonesHistorial,
+    inicializarHistorial,
+  };
+})();
+
+// ======================================================================
+// MÓDULO 2 – SelectionManager (selección rectangular – manita)
+// (idéntico al Mensaje 21)
+// ======================================================================
+class SelectionManager {
+  constructor(opciones) {
+    this.canvasP = opciones.canvasPrincipal;
+    this.canvasT = opciones.canvasTemporal;
+    this.contenedor = opciones.contenedor;
+    this.obtenerColorFondo = opciones.obtenerColorFondo || (() => '#ffffff');
+    this.guardarEstado = opciones.guardarEstado || (() => {});
+    this.handleSize = opciones.handleSize || 12;
+    this.getTransform = opciones.getTransform || (() => ({ panX: 0, panY: 0, zoom: 1 }));
+
+    this.ctxP = this.canvasP.getContext('2d');
+    this.ctxT = this.canvasT.getContext('2d');
+    this.W = this.canvasP.width;
+    this.H = this.canvasP.height;
+
+    this.seleccion = null;
+    this.portapapeles = null;
+    this.activo = false;
+
+    this.isSelecting = false;
+    this.selectionDrag = null;
+    this.resizeHandle = null;
+    this.startX = 0;
+    this.startY = 0;
+
+    this.dragTempCanvas = null;
+    this.dragOriginalRect = null;
+    this.dragCurrentRect = null;
+
+    this._onPointerDown = this._onPointerDown.bind(this);
+    this._onPointerMove = this._onPointerMove.bind(this);
+    this._onPointerUp = this._onPointerUp.bind(this);
+  }
+
+  activar() {
+    if (this.activo) return;
+    this.activo = true;
+    this._addEvent(this.contenedor, 'pointerdown', this._onPointerDown);
+    this._addEvent(window, 'pointermove', this._onPointerMove);
+    this._addEvent(window, 'pointerup', this._onPointerUp);
+    this.limpiarSeleccion();
+    console.log('🔍 Selección normal activada');
+  }
+
+  desactivar() {
+    if (!this.activo) return;
+    this.activo = false;
+    this._removeEvent(this.contenedor, 'pointerdown', this._onPointerDown);
+    this._removeEvent(window, 'pointermove', this._onPointerMove);
+    this._removeEvent(window, 'pointerup', this._onPointerUp);
+    this.limpiarSeleccion();
+    console.log('🔍 Selección normal desactivada');
+  }
+
+  limpiarSeleccion() {
+    this.seleccion = null;
+    this.isSelecting = false;
+    this.selectionDrag = null;
+    this.resizeHandle = null;
+    this.dragTempCanvas = null;
+    this.dragOriginalRect = null;
+    this.dragCurrentRect = null;
+    this.ctxT.clearRect(0, 0, this.W, this.H);
+  }
+
+  dibujarSeleccion() {
+    this.ctxT.clearRect(0, 0, this.W, this.H);
+    if (!this.seleccion) return;
+    const { x, y, w, h } = this.seleccion;
+    this.ctxT.save();
+    this.ctxT.setLineDash([6, 6]);
+    this.ctxT.strokeStyle = '#2c6b9e';
+    this.ctxT.lineWidth = 2;
+    this.ctxT.strokeRect(x, y, w, h);
+    this.ctxT.restore();
+    const handles = this._getHandles(x, y, w, h);
+    this.ctxT.save();
+    this.ctxT.fillStyle = '#2c6b9e';
+    handles.forEach(h => {
+      this.ctxT.fillRect(h.x - this.handleSize/2, h.y - this.handleSize/2,
+                         this.handleSize, this.handleSize);
+    });
+    this.ctxT.restore();
+  }
+
+  _getHandles(x, y, w, h) {
+    return [
+      { x, y, id: 'tl' },
+      { x: x + w/2, y, id: 't' },
+      { x: x + w, y, id: 'tr' },
+      { x: x + w, y: y + h/2, id: 'r' },
+      { x: x + w, y: y + h, id: 'br' },
+      { x: x + w/2, y: y + h, id: 'b' },
+      { x, y: y + h, id: 'bl' },
+      { x, y: y + h/2, id: 'l' }
+    ];
+  }
+
+  _getHandleAt(x, y) {
+    if (!this.seleccion) return null;
+    const handles = this._getHandles(this.seleccion.x, this.seleccion.y, this.seleccion.w, this.seleccion.h);
+    const half = this.handleSize / 2;
+    for (let h of handles) {
+      if (Math.abs(x - h.x) < half && Math.abs(y - h.y) < half) return h.id;
+    }
+    return null;
+  }
+
+  _getCoords(e) {
+    const rect = this.contenedor.getBoundingClientRect();
+    const scaleX = this.W / rect.width;
+    const scaleY = this.H / rect.height;
+    let clientX, clientY;
+    if (e.touches) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+      e.preventDefault();
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    let x = (clientX - rect.left) * scaleX;
+    let y = (clientY - rect.top) * scaleY;
+    const transform = this.getTransform();
+    x = (x - transform.panX) / transform.zoom;
+    y = (y - transform.panY) / transform.zoom;
+    return { x, y };
+  }
+
+  _onPointerDown(e) {
+    if (!this.activo) return;
+    const { x, y } = this._getCoords(e);
+    if (this.seleccion) {
+      const handle = this._getHandleAt(x, y);
+      if (handle) {
+        this.resizeHandle = handle;
+        this.selectionDrag = 'resize';
+        this.startX = x;
+        this.startY = y;
+        this._iniciarArrastreContenido();
+        return;
+      }
+      if (x >= this.seleccion.x && x <= this.seleccion.x + this.seleccion.w &&
+          y >= this.seleccion.y && y <= this.seleccion.y + this.seleccion.h) {
+        this.selectionDrag = 'move';
+        this.startX = x;
+        this.startY = y;
+        this._iniciarArrastreContenido();
+        return;
+      }
+      this.limpiarSeleccion();
+    }
+    this.isSelecting = true;
+    this.startX = x;
+    this.startY = y;
+    this.seleccion = { x, y, w: 0, h: 0 };
+  }
+
+  _onPointerMove(e) {
+    if (!this.activo) return;
+    const { x, y } = this._getCoords(e);
+    if (this.isSelecting) {
+      const dx = x - this.startX;
+      const dy = y - this.startY;
+      this.seleccion.w = dx;
+      this.seleccion.h = dy;
+      this.dibujarSeleccion();
+      return;
+    }
+    if (this.selectionDrag === 'move') {
+      const dx = x - this.startX;
+      const dy = y - this.startY;
+      this._moverSeleccionConContenido(dx, dy);
+      this.startX = x;
+      this.startY = y;
+      return;
+    }
+    if (this.selectionDrag === 'resize') {
+      this._redimensionarSeleccionConContenido(this.resizeHandle, x, y);
+      this.startX = x;
+      this.startY = y;
+      return;
+    }
+  }
+
+  _onPointerUp(e) {
+    if (!this.activo) return;
+    if (this.isSelecting) {
+      this.isSelecting = false;
+      let { x, y, w, h } = this.seleccion;
+      if (w < 0) { x += w; w = -w; }
+      if (h < 0) { y += h; h = -h; }
+      if (w < 5 || h < 5) {
+        this.limpiarSeleccion();
+      } else {
+        this.seleccion = { x, y, w, h };
+        this.dibujarSeleccion();
+      }
+      return;
+    }
+    if (this.selectionDrag) {
+      this._finalizarArrastreContenido();
+      this.selectionDrag = null;
+      this.resizeHandle = null;
+    }
+  }
+
+  _iniciarArrastreContenido() {
+    if (!this.seleccion) return;
+    const { x, y, w, h } = this.seleccion;
+    const imgData = this.ctxP.getImageData(x, y, w, h);
+    this.dragTempCanvas = document.createElement('canvas');
+    this.dragTempCanvas.width = w;
+    this.dragTempCanvas.height = h;
+    this.dragTempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+    this.dragOriginalRect = { x, y, w, h };
+    this.dragCurrentRect = { x, y, w, h };
+  }
+
+  _moverSeleccionConContenido(dx, dy) {
+    if (!this.dragTempCanvas || !this.dragCurrentRect) return;
+    const { w, h } = this.dragCurrentRect;
+    const newX = this.dragCurrentRect.x + dx;
+    const newY = this.dragCurrentRect.y + dy;
+    const colorFondo = this.obtenerColorFondo();
+    this.ctxT.clearRect(0, 0, this.W, this.H);
+    const { x: origX, y: origY, w: origW, h: origH } = this.dragOriginalRect;
+    this.ctxT.save();
+    this.ctxT.fillStyle = colorFondo;
+    this.ctxT.fillRect(origX, origY, origW, origH);
+    this.ctxT.restore();
+    this.ctxT.drawImage(this.dragTempCanvas, newX, newY, w, h);
+    this.seleccion.x = newX;
+    this.seleccion.y = newY;
+    this.dragCurrentRect = { x: newX, y: newY, w, h };
+    this.dibujarSeleccion();
+  }
+
+  _redimensionarSeleccionConContenido(handle, x, y) {
+    if (!this.seleccion || !this.dragTempCanvas || !this.dragOriginalRect) return;
+    let { x: sx, y: sy, w, h } = this.dragOriginalRect;
+    const origX = sx, origY = sy, origW = w, origH = h;
+    switch (handle) {
+      case 'tl': sx = x; sy = y; w = origX + origW - x; h = origY + origH - y; break;
+      case 't':  sy = y; h = origY + origH - y; break;
+      case 'tr': w = x - origX; h = origY + origH - y; break;
+      case 'r':  w = x - origX; break;
+      case 'br': w = x - origX; h = y - origY; break;
+      case 'b':  h = y - origY; break;
+      case 'bl': sx = x; w = origX + origW - x; h = y - origY; break;
+      case 'l':  sx = x; w = origX + origW - x; break;
+      default: return;
+    }
+    if (w < 5) w = 5;
+    if (h < 5) h = 5;
+    const colorFondo = this.obtenerColorFondo();
+    this.ctxT.clearRect(0, 0, this.W, this.H);
+    this.ctxT.save();
+    this.ctxT.fillStyle = colorFondo;
+    this.ctxT.fillRect(origX, origY, origW, origH);
+    this.ctxT.restore();
+    this.ctxT.drawImage(this.dragTempCanvas, sx, sy, w, h);
+    this.seleccion = { x: sx, y: sy, w, h };
+    this.dragCurrentRect = { x: sx, y: sy, w, h };
+    this.dibujarSeleccion();
+  }
+
+  _finalizarArrastreContenido() {
+    if (!this.dragTempCanvas || !this.dragOriginalRect) return;
+    const { x: origX, y: origY, w: origW, h: origH } = this.dragOriginalRect;
+    const { x: newX, y: newY, w: newW, h: newH } = this.seleccion;
+    const colorFondo = this.obtenerColorFondo();
+    this.ctxP.save();
+    this.ctxP.fillStyle = colorFondo;
+    this.ctxP.fillRect(origX, origY, origW, origH);
+    this.ctxP.restore();
+    this.ctxP.drawImage(this.dragTempCanvas, newX, newY, newW, newH);
+    this.guardarEstado();
+    this.ctxT.clearRect(0, 0, this.W, this.H);
+    this.dragTempCanvas = null;
+    this.dragOriginalRect = null;
+    this.dragCurrentRect = null;
+    this.dibujarSeleccion();
+  }
+
+  _addEvent(el, type, handler) {
+    el.addEventListener(type, handler);
+    if (type === 'pointerdown') {
+      el.addEventListener('touchstart', handler, { passive: false });
+    }
+    if (type === 'pointermove') {
+      window.addEventListener('touchmove', handler, { passive: false });
+      el.addEventListener('touchmove', handler, { passive: false });
+    }
+    if (type === 'pointerup') {
+      window.addEventListener('touchend', handler, { passive: false });
+      el.addEventListener('touchend', handler, { passive: false });
+    }
+  }
+
+  _removeEvent(el, type, handler) {
+    el.removeEventListener(type, handler);
+    if (type === 'pointerdown') {
+      el.removeEventListener('touchstart', handler);
+    }
+    if (type === 'pointermove') {
+      window.removeEventListener('touchmove', handler);
+      el.removeEventListener('touchmove', handler);
+    }
+    if (type === 'pointerup') {
+      window.removeEventListener('touchend', handler);
+      el.removeEventListener('touchend', handler);
+    }
+  }
+}
+
+// ======================================================================
+// MÓDULO 3 – SelectionManagerCP (copiado de N_0.html)
+// ======================================================================
+class SelectionManagerCP {
+  constructor(opciones) {
+    this.canvasP = opciones.canvasPrincipal;
+    this.canvasT = opciones.canvasTemporal;
+    this.contenedor = opciones.contenedor;
+    this.obtenerColorFondo = opciones.obtenerColorFondo || (() => '#ffffff');
+    this.guardarEstado = opciones.guardarEstado || (() => {});
+    this.handleSize = opciones.handleSize || 12;
+    this.getTransform = opciones.getTransform || (() => ({ panX: 0, panY: 0, zoom: 1 }));
+
+    this.ctxP = this.canvasP.getContext('2d');
+    this.ctxT = this.canvasT.getContext('2d');
+    this.W = this.canvasP.width;
+    this.H = this.canvasP.height;
+
+    this.seleccion = null;
+    this.portapapeles = null;
+    this.modoCopiar = false;
+    this.activo = false;
+
+    this.isSelecting = false;
+    this.selectionDrag = null;
+    this.resizeHandle = null;
+    this.startX = 0;
+    this.startY = 0;
+
+    this.dragTempCanvas = null;
+    this.dragOriginalRect = null;
+    this.dragCurrentRect = null;
+
+    this.panel = document.getElementById('panelSeleccionCP');
+    this.btnCopiar = document.getElementById('btnCopiarCP');
+    this.btnPegar = document.getElementById('btnPegarCP');
+    this.btnEliminar = document.getElementById('btnEliminarCP');
+
+    this._onPointerDown = this._onPointerDown.bind(this);
+    this._onPointerMove = this._onPointerMove.bind(this);
+    this._onPointerUp = this._onPointerUp.bind(this);
+  }
+
+  activar() {
+    if (this.activo) return;
+    this.activo = true;
+    this._addEvent(this.contenedor, 'pointerdown', this._onPointerDown);
+    this._addEvent(window, 'pointermove', this._onPointerMove);
+    this._addEvent(window, 'pointerup', this._onPointerUp);
+    this.limpiarSeleccion();
+    this.modoCopiar = false;
+    this.actualizarBotonCopiar();
+    console.log('🔍 Selección CP activada');
+  }
+
+  desactivar() {
+    if (!this.activo) return;
+    this.activo = false;
+    this._removeEvent(this.contenedor, 'pointerdown', this._onPointerDown);
+    this._removeEvent(window, 'pointermove', this._onPointerMove);
+    this._removeEvent(window, 'pointerup', this._onPointerUp);
+    this.limpiarSeleccion();
+    this.modoCopiar = false;
+    this.actualizarBotonCopiar();
+    console.log('🔍 Selección CP desactivada');
+  }
+
+  limpiarSeleccion() {
+    this.seleccion = null;
+    this.isSelecting = false;
+    this.selectionDrag = null;
+    this.resizeHandle = null;
+    this.dragTempCanvas = null;
+    this.dragOriginalRect = null;
+    this.dragCurrentRect = null;
+    this.ctxT.clearRect(0, 0, this.W, this.H);
+    if (this.panel) this.panel.classList.remove('visible');
+  }
+
+  actualizarBotonCopiar() {
+    if (!this.btnCopiar) return;
+    if (this.modoCopiar) {
+      this.btnCopiar.classList.add('modo-copiar');
+      this.btnCopiar.innerHTML = '<i class="fas fa-copy"></i> Copiado';
+    } else {
+      this.btnCopiar.classList.remove('modo-copiar');
+      this.btnCopiar.innerHTML = '<i class="fas fa-copy"></i> Copiar';
+    }
+  }
+
+  copiar() {
+    if (!this.seleccion || this.seleccion.w < 2 || this.seleccion.h < 2) return;
+    if (this.modoCopiar) return;
+    const { x, y, w, h } = this.seleccion;
+    const imgData = this.ctxP.getImageData(x, y, w, h);
+    const temp = document.createElement('canvas');
+    temp.width = w;
+    temp.height = h;
+    temp.getContext('2d').putImageData(imgData, 0, 0);
+    this.portapapeles = temp.toDataURL();
+    this.modoCopiar = true;
+    this.actualizarBotonCopiar();
+    console.log('📋 CP: copiado');
+  }
+
+  pegar(callback) {
+    if (!this.portapapeles || !this.modoCopiar) {
+      if (callback) callback();
+      return;
+    }
+    if (!this.seleccion || this.seleccion.w < 2 || this.seleccion.h < 2) {
+      if (callback) callback();
+      return;
+    }
+    const { x, y, w, h } = this.seleccion;
+    const img = new Image();
+    img.onload = () => {
+      this.ctxP.drawImage(img, x, y, w, h);
+      this.guardarEstado();
+      this.modoCopiar = false;
+      this.actualizarBotonCopiar();
+      if (callback) callback();
+    };
+    img.src = this.portapapeles;
+  }
+
+  eliminar(callback) {
+    if (!this.seleccion) { if (callback) callback(); return; }
+    const { x, y, w, h } = this.seleccion;
+    const colorFondo = this.obtenerColorFondo();
+    this.ctxP.save();
+    this.ctxP.fillStyle = colorFondo;
+    this.ctxP.fillRect(x, y, w, h);
+    this.ctxP.restore();
+    this.guardarEstado();
+    this.limpiarSeleccion();
+    this.modoCopiar = false;
+    this.actualizarBotonCopiar();
+    if (callback) callback();
+  }
+
+  dibujarSeleccion() {
+    this.ctxT.clearRect(0, 0, this.W, this.H);
+    if (!this.seleccion) {
+      if (this.panel) this.panel.classList.remove('visible');
+      return;
+    }
+    const { x, y, w, h } = this.seleccion;
+    this.ctxT.save();
+    this.ctxT.setLineDash([6, 6]);
+    this.ctxT.strokeStyle = '#2c6b9e';
+    this.ctxT.lineWidth = 2;
+    this.ctxT.strokeRect(x, y, w, h);
+    this.ctxT.restore();
+    const handles = this._getHandles(x, y, w, h);
+    this.ctxT.save();
+    this.ctxT.fillStyle = '#2c6b9e';
+    handles.forEach(h => {
+      this.ctxT.fillRect(h.x - this.handleSize/2, h.y - this.handleSize/2,
+                         this.handleSize, this.handleSize);
+    });
+    this.ctxT.restore();
+    if (this.panel) {
+      this.panel.classList.add('visible');
+      this.panel.style.display = 'flex';
+      const rect = this.contenedor.getBoundingClientRect();
+      const scaleX = this.W / rect.width;
+      const scaleY = this.H / rect.height;
+      const px = (x + w/2) * scaleX + this.getTransform().panX * scaleX + rect.left;
+      const py = (y - 60) * scaleY + this.getTransform().panY * scaleY + rect.top;
+      const panelWidth = Math.min(200, window.innerWidth - 20);
+      const panelHeight = this.panel.offsetHeight || 80;
+      this.panel.style.left = Math.max(10, Math.min(px, window.innerWidth - panelWidth - 10)) + 'px';
+      this.panel.style.top = Math.max(10, Math.min(py, window.innerHeight - panelHeight - 10)) + 'px';
+    }
+  }
+
+  _getHandles(x, y, w, h) {
+    return [
+      { x, y, id: 'tl' },
+      { x: x + w/2, y, id: 't' },
+      { x: x + w, y, id: 'tr' },
+      { x: x + w, y: y + h/2, id: 'r' },
+      { x: x + w, y: y + h, id: 'br' },
+      { x: x + w/2, y: y + h, id: 'b' },
+      { x, y: y + h, id: 'bl' },
+      { x, y: y + h/2, id: 'l' }
+    ];
+  }
+
+  _getHandleAt(x, y) {
+    if (!this.seleccion) return null;
+    const handles = this._getHandles(this.seleccion.x, this.seleccion.y, this.seleccion.w, this.seleccion.h);
+    const half = this.handleSize / 2;
+    for (let h of handles) {
+      if (Math.abs(x - h.x) < half && Math.abs(y - h.y) < half) return h.id;
+    }
+    return null;
+  }
+
+  _getCoords(e) {
+    const rect = this.contenedor.getBoundingClientRect();
+    const scaleX = this.W / rect.width;
+    const scaleY = this.H / rect.height;
+    let clientX, clientY;
+    if (e.touches) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+      e.preventDefault();
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    let x = (clientX - rect.left) * scaleX;
+    let y = (clientY - rect.top) * scaleY;
+    const transform = this.getTransform();
+    x = (x - transform.panX) / transform.zoom;
+    y = (y - transform.panY) / transform.zoom;
+    return { x, y };
+  }
+
+  _onPointerDown(e) {
+    if (!this.activo) return;
+    const { x, y } = this._getCoords(e);
+
+    if (this.seleccion) {
+      const handle = this._getHandleAt(x, y);
+      if (handle) {
+        this.resizeHandle = handle;
+        this.selectionDrag = 'resize';
+        this.startX = x;
+        this.startY = y;
+        this._iniciarArrastreContenido();
+        return;
+      }
+      if (x >= this.seleccion.x && x <= this.seleccion.x + this.seleccion.w &&
+          y >= this.seleccion.y && y <= this.seleccion.y + this.seleccion.h) {
+        this.selectionDrag = 'move';
+        this.startX = x;
+        this.startY = y;
+        this._iniciarArrastreContenido();
+        return;
+      }
+      this.limpiarSeleccion();
+      this.modoCopiar = false;
+      this.actualizarBotonCopiar();
+    }
+    this.isSelecting = true;
+    this.startX = x;
+    this.startY = y;
+    this.seleccion = { x, y, w: 0, h: 0 };
+  }
+
+  _onPointerMove(e) {
+    if (!this.activo) return;
+    const { x, y } = this._getCoords(e);
+
+    if (this.isSelecting) {
+      const dx = x - this.startX;
+      const dy = y - this.startY;
+      this.seleccion.w = dx;
+      this.seleccion.h = dy;
+      this.dibujarSeleccion();
+      return;
+    }
+
+    if (this.selectionDrag === 'move') {
+      const dx = x - this.startX;
+      const dy = y - this.startY;
+      this._moverSeleccionConContenido(dx, dy);
+      this.startX = x;
+      this.startY = y;
+      return;
+    }
+
+    if (this.selectionDrag === 'resize') {
+      this._redimensionarSeleccionConContenido(this.resizeHandle, x, y);
+      this.startX = x;
+      this.startY = y;
+      return;
+    }
+  }
+
+  _onPointerUp(e) {
+    if (!this.activo) return;
+
+    if (this.isSelecting) {
+      this.isSelecting = false;
+      let { x, y, w, h } = this.seleccion;
+      if (w < 0) { x += w; w = -w; }
+      if (h < 0) { y += h; h = -h; }
+      if (w < 5 || h < 5) {
+        this.limpiarSeleccion();
+      } else {
+        this.seleccion = { x, y, w, h };
+        this.dibujarSeleccion();
+      }
+      return;
+    }
+
+    if (this.selectionDrag) {
+      this.selectionDrag = null;
+      this.resizeHandle = null;
+    }
+  }
+
+  _iniciarArrastreContenido() {
+    if (!this.seleccion) return;
+    const { x, y, w, h } = this.seleccion;
+    const imgData = this.ctxP.getImageData(x, y, w, h);
+    this.dragTempCanvas = document.createElement('canvas');
+    this.dragTempCanvas.width = w;
+    this.dragTempCanvas.height = h;
+    this.dragTempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+    this.dragOriginalRect = { x, y, w, h };
+    this.dragCurrentRect = { x, y, w, h };
+  }
+
+  _moverSeleccionConContenido(dx, dy) {
+    if (!this.dragTempCanvas || !this.dragCurrentRect) return;
+    const { w, h } = this.dragCurrentRect;
+    const newX = this.dragCurrentRect.x + dx;
+    const newY = this.dragCurrentRect.y + dy;
+    const colorFondo = this.obtenerColorFondo();
+    this.ctxT.clearRect(0, 0, this.W, this.H);
+    const { x: origX, y: origY, w: origW, h: origH } = this.dragOriginalRect;
+    this.ctxT.save();
+    this.ctxT.fillStyle = colorFondo;
+    this.ctxT.fillRect(origX, origY, origW, origH);
+    this.ctxT.restore();
+    this.ctxT.drawImage(this.dragTempCanvas, newX, newY, w, h);
+    this.seleccion.x = newX;
+    this.seleccion.y = newY;
+    this.dragCurrentRect = { x: newX, y: newY, w, h };
+    this.dibujarSeleccion();
+  }
+
+  _redimensionarSeleccionConContenido(handle, x, y) {
+    if (!this.seleccion || !this.dragTempCanvas || !this.dragOriginalRect) return;
+    let { x: sx, y: sy, w, h } = this.dragOriginalRect;
+    const origX = sx, origY = sy, origW = w, origH = h;
+    switch (handle) {
+      case 'tl': sx = x; sy = y; w = origX + origW - x; h = origY + origH - y; break;
+      case 't':  sy = y; h = origY + origH - y; break;
+      case 'tr': w = x - origX; h = origY + origH - y; break;
+      case 'r':  w = x - origX; break;
+      case 'br': w = x - origX; h = y - origY; break;
+      case 'b':  h = y - origY; break;
+      case 'bl': sx = x; w = origX + origW - x; h = y - origY; break;
+      case 'l':  sx = x; w = origX + origW - x; break;
+      default: return;
+    }
+    if (w < 5) w = 5;
+    if (h < 5) h = 5;
+    const colorFondo = this.obtenerColorFondo();
+    this.ctxT.clearRect(0, 0, this.W, this.H);
+    this.ctxT.save();
+    this.ctxT.fillStyle = colorFondo;
+    this.ctxT.fillRect(origX, origY, origW, origH);
+    this.ctxT.restore();
+    this.ctxT.drawImage(this.dragTempCanvas, sx, sy, w, h);
+    this.seleccion = { x: sx, y: sy, w, h };
+    this.dragCurrentRect = { x: sx, y: sy, w, h };
+    this.dibujarSeleccion();
+  }
+
+  _addEvent(el, type, handler) {
+    el.addEventListener(type, handler);
+    if (type === 'pointerdown') {
+      el.addEventListener('touchstart', handler, { passive: false });
+    }
+    if (type === 'pointermove') {
+      window.addEventListener('touchmove', handler, { passive: false });
+      el.addEventListener('touchmove', handler, { passive: false });
+    }
+    if (type === 'pointerup') {
+      window.addEventListener('touchend', handler, { passive: false });
+      el.addEventListener('touchend', handler, { passive: false });
+    }
+  }
+
+  _removeEvent(el, type, handler) {
+    el.removeEventListener(type, handler);
+    if (type === 'pointerdown') {
+      el.removeEventListener('touchstart', handler);
+    }
+    if (type === 'pointermove') {
+      window.removeEventListener('touchmove', handler);
+      el.removeEventListener('touchmove', handler);
+    }
+    if (type === 'pointerup') {
+      window.removeEventListener('touchend', handler);
+      el.removeEventListener('touchend', handler);
+    }
+  }
+}
+
+// ======================================================================
+// MÓDULO 4 – UI (con ambos selectores)
+// ======================================================================
+(function UI() {
+  const toggleGrupo1 = document.getElementById('toggleGrupo1');
+  const toggleGrupo2 = document.getElementById('toggleGrupo2');
+  const grupo1 = document.getElementById('grupo1');
+  const grupo2 = document.getElementById('grupo2');
+
+  const btnLapiz = document.getElementById('btnLapiz');
+  const btnResaltador = document.getElementById('btnResaltador');
+  const btnLinea = document.getElementById('btnLinea');
+  const btnRectangulo = document.getElementById('btnRectangulo');
+  const btnSeleccion = document.getElementById('btnSeleccion');
+  const btnFondo = document.getElementById('btnFondo');
+  const btnGrid = document.getElementById('btnGrid');
+  const btnMover = document.getElementById('btnMover');
+  const btnZoomIn = document.getElementById('btnZoomIn');
+  const btnZoomOut = document.getElementById('btnZoomOut');
+  const btnDeshacer = document.getElementById('btnDeshacer');
+  const btnRehacer = document.getElementById('btnRehacer');
+  const btnCP = document.getElementById('btnCP');
+  const btnImprimir = document.getElementById('btnImprimir');
+  const btnInstalarApp = document.getElementById('btnInstalarApp');
+  const separadorInstalar = document.getElementById('separadorInstalar');
+  const btnLapizTemporal = document.getElementById('btnLapizTemporal');
+  const btnBorrarTemporal = document.getElementById('btnBorrarTemporal');
+  const panelLapizTemporal = document.getElementById('panelLapizTemporal');
+  const coloresLapizTemporal = document.querySelectorAll('#coloresLapizTemporal .color-swatch');
+  const barraLateral = document.getElementById('barraLateral');
+
+  const panelLapiz = document.getElementById('panelLapiz');
+  const panelResaltador = document.getElementById('panelResaltador');
+  const panelFondo = document.getElementById('panelFondo');
+
+  const btnCopiarCP = document.getElementById('btnCopiarCP');
+  const btnPegarCP = document.getElementById('btnPegarCP');
+  const btnEliminarCP = document.getElementById('btnEliminarCP');
+
+  const colorSwatchesLapiz = document.querySelectorAll('#coloresLapiz .color-swatch');
+  const grosorBtnsLapiz = document.querySelectorAll('#grosorLapiz .grosor-btn');
+  const colorSwatchesResaltador = document.querySelectorAll('#coloresResaltador .color-swatch');
+  const grosorBtnsResaltador = document.querySelectorAll('#grosorResaltador .grosor-btn');
+  const swatchesFondo = document.querySelectorAll('#coloresFondo .color-swatch');
+
+  // Instancias independientes
+  const selectorNormal = new SelectionManager({
+    canvasPrincipal: Pizarra.getCanvasPrincipal(),
+    canvasTemporal: Pizarra.getCanvasTemporal(),
+    contenedor: Pizarra.getContenedor(),
+    obtenerColorFondo: Pizarra.getColorFondo,
+    guardarEstado: Pizarra.guardarEstado,
+    getTransform: Pizarra.getTransform,
+    handleSize: 12,
+  });
+
+  const selectorCP = new SelectionManagerCP({
+    canvasPrincipal: Pizarra.getCanvasPrincipal(),
+    canvasTemporal: Pizarra.getCanvasTemporal(),
+    contenedor: Pizarra.getContenedor(),
+    obtenerColorFondo: Pizarra.getColorFondo,
+    guardarEstado: Pizarra.guardarEstado,
+    getTransform: Pizarra.getTransform,
+    handleSize: 12,
+  });
+
+  // ===== Toggles =====
+  let grupo1Contraido = false, grupo2Contraido = false;
+  toggleGrupo1.addEventListener('click', function(e) {
+    e.stopPropagation();
+    grupo1Contraido = !grupo1Contraido;
+    grupo1.classList.toggle('contraido', grupo1Contraido);
+    this.querySelector('i:first-child').className = grupo1Contraido ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+  });
+  toggleGrupo1.addEventListener('touchstart', function(e) { e.preventDefault(); this.click(); }, { passive: false });
+  toggleGrupo2.addEventListener('click', function(e) {
+    e.stopPropagation();
+    grupo2Contraido = !grupo2Contraido;
+    grupo2.classList.toggle('contraido', grupo2Contraido);
+    this.querySelector('i:first-child').className = grupo2Contraido ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+  });
+  toggleGrupo2.addEventListener('touchstart', function(e) { e.preventDefault(); this.click(); }, { passive: false });
+
+  // ===== Cerrar paneles =====
+  function cerrarPaneles() {
+    document.querySelectorAll('.floating-panel').forEach(p => {
+      if (p.id === 'panelSeleccionCP' && selectorCP.activo && selectorCP.seleccion) return;
+      p.classList.remove('visible');
+      p.style.display = 'none';
+    });
+  }
+
+  function posicionarPanel(btn, panel) {
+    const rect = btn.getBoundingClientRect();
+    let left = rect.right + 8;
+    let top = rect.top + (rect.height / 2) - (panel.offsetHeight / 2);
+    if (left + panel.offsetWidth > window.innerWidth) left = rect.left - panel.offsetWidth - 8;
+    if (top < 10) top = 10;
+    if (top + panel.offsetHeight > window.innerHeight - 10) top = window.innerHeight - panel.offsetHeight - 10;
+    panel.style.left = left + 'px';
+    panel.style.top = top + 'px';
+  }
+
+  function togglePanel(btn, panel) {
+    const isVisible = panel.classList.contains('visible');
+    cerrarPaneles();
+    if (!isVisible) {
+      panel.classList.add('visible');
+      panel.style.display = 'flex';
+      posicionarPanel(btn, panel);
+    }
+  }
+
+  // ===== Activar herramienta =====
+  function setTool(tool, btn) {
+    // CP (4 puntos)
+    if (tool === 'cp') {
+      const isActive = btn.classList.contains('activo');
+      if (isActive) {
+        selectorCP.desactivar();
+        btn.classList.remove('activo');
+        setTool('lapiz', btnLapiz);
+      } else {
+        if (selectorNormal.activo) {
+          selectorNormal.desactivar();
+          btnSeleccion.classList.remove('activo');
+        }
+        document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
+        btnLapiz.classList.remove('activo');
+        btn.classList.add('activo');
+        Pizarra.setHerramienta('cp', 'principal');
+        selectorCP.activar();
+        cerrarPaneles();
+      }
+      return;
+    }
+
+    // Si CP está activo, desactivarlo
+    if (selectorCP.activo) {
+      selectorCP.desactivar();
+      btnCP.classList.remove('activo');
+    }
+
+    // Selección normal (manita)
+    if (tool === 'seleccionar') {
+      const isActive = btn.classList.contains('activo');
+      if (isActive) {
+        selectorNormal.desactivar();
+        btn.classList.remove('activo');
+        cerrarPaneles();
+        Pizarra.setHerramienta('lapiz', 'principal');
+        btnLapiz.classList.add('activo');
+      } else {
+        Pizarra.setHerramienta('seleccionar', 'principal');
+        selectorNormal.activar();
+        btn.classList.add('activo');
+        document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
+        btn.classList.add('activo');
+        cerrarPaneles();
+      }
+      return;
+    }
+
+    // Desactivar selección normal si está activa
+    if (selectorNormal.activo) {
+      selectorNormal.desactivar();
+      btnSeleccion.classList.remove('activo');
+    }
+
+    // Resto de herramientas
+    if (tool === 'lapiz' && btnLapiz.classList.contains('activo')) {
+      togglePanel(btnLapiz, panelLapiz);
+      return;
+    }
+    if (tool === 'resaltador' && btnResaltador.classList.contains('activo')) {
+      togglePanel(btnResaltador, panelResaltador);
+      return;
+    }
+
+    Pizarra.setHerramienta(tool, 'principal');
+    document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
+    btn.classList.add('activo');
+    cerrarPaneles();
+
+    if (tool === 'lapiz') {
+      panelLapiz.classList.add('visible');
+      panelLapiz.style.display = 'flex';
+      posicionarPanel(btnLapiz, panelLapiz);
+    } else if (tool === 'resaltador') {
+      panelResaltador.classList.add('visible');
+      panelResaltador.style.display = 'flex';
+      posicionarPanel(btnResaltador, panelResaltador);
+    } else if (tool === 'fondo') {
+      panelFondo.classList.add('visible');
+      panelFondo.style.display = 'flex';
+      posicionarPanel(btnFondo, panelFondo);
+    }
+    Pizarra.actualizarBotonesHistorial();
+  }
+
+  // ===== Proceso: ProcesoActivarLapizTemporal =====
+  // Activa la herramienta de anotación temporal (capa efímera, no forma
+  // parte del historial de deshacer/rehacer). Un segundo clic con la
+  // herramienta ya activa solo abre/cierra el panel de colores.
+  function ProcesoActivarLapizTemporal() {
+    const isActive = btnLapizTemporal.classList.contains('activo');
+    if (isActive) {
+      togglePanel(btnLapizTemporal, panelLapizTemporal);
+      return;
+    }
+    if (selectorCP.activo) { selectorCP.desactivar(); btnCP.classList.remove('activo'); }
+    if (selectorNormal.activo) { selectorNormal.desactivar(); btnSeleccion.classList.remove('activo'); }
+    document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
+    cerrarPaneles();
+
+    Pizarra.setHerramienta('lapizTemporal', 'temporal');
+    btnLapizTemporal.classList.add('activo');
+    panelLapizTemporal.classList.add('visible');
+    panelLapizTemporal.style.display = 'flex';
+    posicionarPanel(btnLapizTemporal, panelLapizTemporal);
+  }
+
+  // ===== Proceso: ProcesoLimpiarLapizTemporal =====
+  // Borra únicamente lo dibujado con el lápiz temporal (capa efímera),
+  // sin afectar el contenido principal ni el historial.
+  function ProcesoLimpiarLapizTemporal() {
+    Pizarra.limpiarTemporal();
+  }
+
+  // ===== Proceso: desactivar visualmente el lápiz temporal =====
+  function desactivarVisualLapizTemporal() {
+    if (btnLapizTemporal.classList.contains('activo')) {
+      btnLapizTemporal.classList.remove('activo');
+      panelLapizTemporal.classList.remove('visible');
+      panelLapizTemporal.style.display = 'none';
+    }
+  }
+
+  // ===== Enlace de botones =====
+  function bindButton(btn, handler) {
+    btn.addEventListener('click', handler);
+    btn.addEventListener('touchstart', function(e) { e.preventDefault(); this.click(); }, { passive: false });
+  }
+
+  bindButton(btnLapiz, () => setTool('lapiz', btnLapiz));
+  bindButton(btnResaltador, () => setTool('resaltador', btnResaltador));
+  bindButton(btnLinea, () => setTool('linea', btnLinea));
+  bindButton(btnRectangulo, () => setTool('rectangulo', btnRectangulo));
+  bindButton(btnSeleccion, () => setTool('seleccionar', btnSeleccion));
+  bindButton(btnFondo, () => setTool('fondo', btnFondo));
+  bindButton(btnGrid, () => { const est = Pizarra.toggleGrid(); btnGrid.classList.toggle('activo', est); });
+  bindButton(btnMover, () => { if (btnMover.classList.contains('activo')) setTool('lapiz', btnLapiz); else setTool('mover', btnMover); });
+  bindButton(btnZoomIn, () => Pizarra.zoomIn());
+  bindButton(btnZoomOut, () => Pizarra.zoomOut());
+  bindButton(btnDeshacer, () => { Pizarra.deshacer(); Pizarra.actualizarBotonesHistorial(); });
+  bindButton(btnRehacer, () => { Pizarra.rehacer(); Pizarra.actualizarBotonesHistorial(); });
+  bindButton(btnCP, () => setTool('cp', btnCP));
+  bindButton(btnImprimir, () => ProcesoImprimirPizarra());
+  bindButton(btnLapizTemporal, () => ProcesoActivarLapizTemporal());
+  bindButton(btnBorrarTemporal, () => ProcesoLimpiarLapizTemporal());
+
+  // ===== Regla: activar cualquier herramienta del menú vertical =====
+  // borra automáticamente lo dibujado con el lápiz temporal.
+  barraLateral.addEventListener('click', e => {
+    if (e.target.closest('.btn-icon')) {
+      Pizarra.limpiarTemporal();
+      desactivarVisualLapizTemporal();
+    }
+  });
+
+  // ===== Selección de color del lápiz temporal =====
+  coloresLapizTemporal.forEach(sw => {
+    sw.addEventListener('click', e => {
+      e.stopPropagation();
+      Pizarra.setColorTemporal(sw.dataset.color);
+      coloresLapizTemporal.forEach(s => s.classList.remove('seleccionado'));
+      sw.classList.add('seleccionado');
+      cerrarPaneles();
+    });
+    sw.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); sw.click(); }, { passive: false });
+  });
+
+  // ===== Acciones del panel CP =====
+  function bindActionCP(btn, actionFn) {
+    btn.addEventListener('pointerdown', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      actionFn();
+      selectorCP.actualizarBotonCopiar();
+    });
+    btn.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      actionFn();
+      selectorCP.actualizarBotonCopiar();
+    }, { passive: false });
+  }
+
+  bindActionCP(btnCopiarCP, () => selectorCP.copiar());
+  bindActionCP(btnPegarCP, () => {
+    selectorCP.pegar(() => {
+      selectorCP.limpiarSeleccion();
+      setTool('lapiz', btnLapiz);
+      selectorCP.actualizarBotonCopiar();
+    });
+  });
+  bindActionCP(btnEliminarCP, () => {
+    selectorCP.eliminar(() => {
+      selectorCP.limpiarSeleccion();
+      setTool('lapiz', btnLapiz);
+      selectorCP.actualizarBotonCopiar();
+    });
+  });
+
+  // ===== Configuración lápiz, resaltador, fondo =====
+  colorSwatchesLapiz.forEach(sw => {
+    sw.addEventListener('click', e => { e.stopPropagation(); Pizarra.setColor(sw.dataset.color); colorSwatchesLapiz.forEach(s => s.classList.remove('seleccionado')); sw.classList.add('seleccionado'); cerrarPaneles(); });
+    sw.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); sw.click(); }, { passive: false });
+  });
+  grosorBtnsLapiz.forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); Pizarra.setGrosor(btn.dataset.size, 'principal'); grosorBtnsLapiz.forEach(b => b.classList.remove('seleccionado')); btn.classList.add('seleccionado'); cerrarPaneles(); });
+    btn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); btn.click(); }, { passive: false });
+  });
+  colorSwatchesResaltador.forEach(sw => {
+    sw.addEventListener('click', e => { e.stopPropagation(); Pizarra.setResaltadorColor(sw.dataset.color); colorSwatchesResaltador.forEach(s => s.classList.remove('seleccionado')); sw.classList.add('seleccionado'); cerrarPaneles(); });
+    sw.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); sw.click(); }, { passive: false });
+  });
+  grosorBtnsResaltador.forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); Pizarra.setResaltadorGrosor(btn.dataset.size); grosorBtnsResaltador.forEach(b => b.classList.remove('seleccionado')); btn.classList.add('seleccionado'); cerrarPaneles(); });
+    btn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); btn.click(); }, { passive: false });
+  });
+  swatchesFondo.forEach(sw => {
+    sw.addEventListener('click', e => { e.stopPropagation(); Pizarra.setFondo(sw.dataset.color); swatchesFondo.forEach(s => s.classList.remove('seleccionado')); sw.classList.add('seleccionado'); cerrarPaneles(); });
+    sw.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); sw.click(); }, { passive: false });
+  });
+
+  // ===== Cerrar paneles al clic fuera =====
+  document.addEventListener('pointerdown', e => {
+    if (!e.target.closest('.floating-panel') && !e.target.closest('.btn-icon')) {
+      cerrarPaneles();
+    }
+  });
+
+  // ======================================================================
+  // PROCESO: ProcesoImprimirPizarra
+  // Genera una vista de impresión limpia (sin barras ni controles),
+  // usando el contenido actual del canvas principal, con marca de autoría.
+  // ======================================================================
+  function ProcesoImprimirPizarra() {
+    const canvasP = Pizarra.getCanvasPrincipal();
+    const fondo = Pizarra.getColorFondo();
+
+    // Lienzo temporal para asegurar fondo sólido (por si hay transparencia)
+    const canvasExport = document.createElement('canvas');
+    canvasExport.width = canvasP.width;
+    canvasExport.height = canvasP.height;
+    const ctxExport = canvasExport.getContext('2d');
+    ctxExport.fillStyle = fondo || '#ffffff';
+    ctxExport.fillRect(0, 0, canvasExport.width, canvasExport.height);
+    ctxExport.drawImage(canvasP, 0, 0);
+
+    const imagenDataUrl = canvasExport.toDataURL('image/png');
+    const fecha = new Date().toLocaleDateString('es-EC', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const ventana = window.open('', '_blank');
+    if (!ventana) {
+      alert('El navegador bloqueó la ventana de impresión. Por favor habilita las ventanas emergentes.');
+      return;
+    }
+
+    ventana.document.write(`
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <title>Impresión · Pizarra</title>
+        <style>
+          @page { size: landscape; margin: 12mm; }
+          * { margin:0; padding:0; box-sizing:border-box; }
+          body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            padding: 20px;
+          }
+          .hoja {
+            width: 100%;
+            max-width: 1200px;
+          }
+          .encabezado {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            border-bottom: 2px solid #1a2634;
+            padding-bottom: 8px;
+            margin-bottom: 14px;
+          }
+          .encabezado h1 {
+            font-size: 16px;
+            color:#1a2634;
+            font-weight:600;
+          }
+          .encabezado span {
+            font-size: 12px;
+            color:#6a7a8a;
+          }
+          .imagen-pizarra {
+            width: 100%;
+            border: 1px solid #d0d7e2;
+            border-radius: 8px;
+            display:block;
+          }
+          .pie {
+            margin-top: 14px;
+            text-align:center;
+            font-size: 11px;
+            color:#8a97a6;
+            letter-spacing: 0.02em;
+          }
+          @media print {
+            body { padding: 0; }
+            .encabezado, .pie { color:#000 !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="hoja">
+          <div class="encabezado">
+            <h1>Pizarra Digital</h1>
+            <span>${fecha}</span>
+          </div>
+          <img class="imagen-pizarra" src="${imagenDataUrl}" alt="Contenido de la pizarra">
+          <div class="pie">Mat. Edgar Johni Bustamante Romero, Ph.D.</div>
+        </div>
+        <script>
+          window.onload = function() {
+            window.focus();
+            window.print();
+          };
+        <\/script>
+      </body>
+      </html>
+    `);
+    ventana.document.close();
+  }
+
+  // ======================================================================
+  // PROCESO: ProcesoInstalarPWA
+  // Muestra un botón "Instalar" solo cuando el navegador confirma que la
+  // app cumple los requisitos de instalación (manifest + service worker
+  // + HTTPS). Al pulsarlo, dispara el diálogo nativo de instalación.
+  // ======================================================================
+  let eventoInstalacionDiferido = null;
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    eventoInstalacionDiferido = e;
+    btnInstalarApp.style.display = 'inline-flex';
+    separadorInstalar.style.display = 'block';
+  });
+
+  bindButton(btnInstalarApp, async () => {
+    if (!eventoInstalacionDiferido) return;
+    eventoInstalacionDiferido.prompt();
+    await eventoInstalacionDiferido.userChoice;
+    eventoInstalacionDiferido = null;
+    btnInstalarApp.style.display = 'none';
+    separadorInstalar.style.display = 'none';
+  });
+
+  window.addEventListener('appinstalled', () => {
+    btnInstalarApp.style.display = 'none';
+    separadorInstalar.style.display = 'none';
+    console.log('✅ Pizarrón instalado como aplicación.');
+  });
+
+  // ======================================================================
+  // PROCESO: RegistroServiceWorker
+  // Habilita el uso sin conexión y es requisito técnico para que el
+  // navegador considere la app "instalable".
+  // ======================================================================
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js')
+        .catch(err => console.warn('No se pudo registrar el service worker:', err));
+    });
+  }
+
+  // ===== Inicialización =====
+  Pizarra.setHerramienta('lapiz', 'principal');
+  Pizarra.setColor('#1a1a1a');
+  Pizarra.setGrosor(3, 'principal');
+  Pizarra.setOpacidad(100, 'principal');
+  Pizarra.setFondo('#ffffff');
+  panelLapiz.classList.add('visible');
+  panelLapiz.style.display = 'flex';
+  posicionarPanel(btnLapiz, panelLapiz);
+
+  Pizarra.inicializarHistorial();
+
+  [toggleGrupo1, toggleGrupo2].forEach(t => t.querySelector('i:first-child').className = 'fas fa-chevron-down');
+  selectorCP.actualizarBotonCopiar();
+
+  console.log('✅ Versión final: Manita y CP funcionan de forma independiente.');
+})();
+</script>
+</body>
+</html>
