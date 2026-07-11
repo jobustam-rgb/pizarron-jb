@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Pizarra · Johni Bustamante v1</title>
+  <title>Pizarra - J Bustamante - v.1</title>
 
   <!-- ===== PWA: manifest, ícono y color de tema ===== -->
   <link rel="manifest" href="./manifest.json">
@@ -96,6 +96,67 @@
       touch-action: none;
       margin-top: 10px;
     }
+    /* ===== BARRA DE PESTAÑAS (Cuaderno multi-página) ===== */
+    .barra-pestanas {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      padding: 2px 4px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    .barra-pestanas::-webkit-scrollbar { height: 5px; }
+    .barra-pestanas::-webkit-scrollbar-thumb { background: #d0d9e8; border-radius: 10px; }
+    .pestana {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px 7px 14px;
+      border-radius: 14px;
+      background: #eef1f5;
+      color: #5a6a7a;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .pestana:hover { background: #e2e7ee; }
+    .pestana.activa {
+      background: #1a2634;
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(26,38,52,0.25);
+    }
+    .pestana .cerrar-pestana {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      opacity: 0.55;
+      font-size: 0.75rem;
+      line-height: 1;
+    }
+    .pestana .cerrar-pestana:hover { opacity: 1; background: rgba(0,0,0,0.12); }
+    .pestana.activa .cerrar-pestana:hover { background: rgba(255,255,255,0.22); }
+    .btn-nueva-pestana {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #eef1f5;
+      color: #5a6a7a;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+    .btn-nueva-pestana:hover { background: #2563eb; color: #ffffff; transform: scale(1.08); }
     .pizarra-viewport {
       position: absolute;
       top: 0;
@@ -319,6 +380,10 @@
     <button class="btn-icon" id="btnBorrarTemporal" title="Borrar anotaciones del lápiz temporal"><i class="fas fa-trash"></i></button>
     <div class="separador-vertical"></div>
     <button class="btn-icon" id="btnImprimir" title="Imprimir pizarra"><i class="fas fa-print"></i></button>
+    <div class="separador-vertical"></div>
+    <button class="btn-icon" id="btnGuardarCuaderno" title="Guardar cuaderno (.pizarra)"><i class="fas fa-save"></i></button>
+    <button class="btn-icon" id="btnAbrirCuaderno" title="Abrir cuaderno (.pizarra)"><i class="fas fa-folder-open"></i></button>
+    <input type="file" id="inputAbrirCuaderno" accept=".pizarra,.json,application/json" style="display:none;">
     <div class="separador-vertical" id="separadorInstalar" style="display:none;"></div>
     <button class="btn-icon" id="btnInstalarApp" title="Instalar como aplicación" style="display:none;"><i class="fas fa-download"></i></button>
   </div>
@@ -339,6 +404,7 @@
         <div class="iconos-grupo">
           <button class="btn-icon activo" id="btnLapiz" data-herramienta="lapiz"><i class="fas fa-pencil-alt"></i></button>
           <button class="btn-icon" id="btnResaltador" data-herramienta="resaltador"><i class="fas fa-highlighter"></i></button>
+          <button class="btn-icon" id="btnGoma" data-herramienta="goma"><i class="fas fa-eraser"></i></button>
           <button class="btn-icon" id="btnLinea" data-herramienta="linea"><i class="fas fa-minus"></i></button>
           <button class="btn-icon" id="btnRectangulo" data-herramienta="rectangulo"><i class="fas fa-border-all"></i></button>
           <button class="btn-icon" id="btnSeleccion" data-herramienta="seleccionar"><i class="fas fa-hand-pointer"></i></button>
@@ -381,15 +447,24 @@
     <div class="floating-panel" id="panelResaltador">
       <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">COLOR</div>
       <div class="grupo-colores" id="coloresResaltador">
-        <span class="color-swatch seleccionado" style="background:#fff9c4;" data-color="#fff9c4"></span>
-        <span class="color-swatch" style="background:#d2b48c;" data-color="#d2b48c"></span>
-        <span class="color-swatch" style="background:#cccccc;" data-color="#cccccc"></span>
+        <span class="color-swatch seleccionado" style="background:#FFEB3B;" data-color="#FFEB3B" title="Amarillo"></span>
+        <span class="color-swatch" style="background:#76FF03;" data-color="#76FF03" title="Verde"></span>
+        <span class="color-swatch" style="background:#FF4FA3;" data-color="#FF4FA3" title="Rosa"></span>
       </div>
       <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em; margin-top:4px;">GROSOR</div>
       <div class="grosor-group" id="grosorResaltador">
         <button class="grosor-btn seleccionado" data-size="15">15</button>
         <button class="grosor-btn" data-size="30">30</button>
         <button class="grosor-btn" data-size="45">45</button>
+      </div>
+    </div>
+
+    <div class="floating-panel" id="panelGoma">
+      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">GROSOR DE LA GOMA</div>
+      <div class="grosor-group" id="grosorGomaGrupo">
+        <button class="grosor-btn seleccionado" data-size="25" title="Mediano">M</button>
+        <button class="grosor-btn" data-size="40" title="Grueso">G</button>
+        <button class="grosor-btn" data-size="60" title="Muy grueso">MG</button>
       </div>
     </div>
 
@@ -426,6 +501,11 @@
 
     <div class="firma">Mat. Edgar Johni Bustamante Romero, Ph.D.</div>
   </div>
+
+  <!-- BARRA DE PESTAÑAS (Cuaderno multi-página) -->
+  <div class="barra-pestanas" id="barraPestanas">
+    <!-- Las pestañas se generan dinámicamente por JS: ver módulo GestorCuaderno -->
+  </div>
 </div>
 
 <script>
@@ -458,7 +538,7 @@ const Pizarra = (() => {
   let colorActivo = '#1a1a1a';
   let grosorActivo = 3;
   let opacidadActivo = 1;
-  let grosorGoma = 8;
+  let grosorGoma = 25;
   let tamanoRect = 40;
   let fondoColor = '#ffffff';
 
@@ -523,7 +603,7 @@ const Pizarra = (() => {
   let lastX = 0, lastY = 0;
   let startX = 0, startY = 0;
   let gridVisible = false;
-  let resaltadorColor = '#fff9c4';
+  let resaltadorColor = '#FFEB3B';
   let resaltadorGrosor = 15;
   const RESALTADOR_OPACIDAD = 0.15;
 
@@ -1632,6 +1712,10 @@ class SelectionManagerCP {
   const btnRehacer = document.getElementById('btnRehacer');
   const btnCP = document.getElementById('btnCP');
   const btnImprimir = document.getElementById('btnImprimir');
+  const btnGuardarCuaderno = document.getElementById('btnGuardarCuaderno');
+  const btnAbrirCuaderno = document.getElementById('btnAbrirCuaderno');
+  const inputAbrirCuaderno = document.getElementById('inputAbrirCuaderno');
+  const barraPestanas = document.getElementById('barraPestanas');
   const btnInstalarApp = document.getElementById('btnInstalarApp');
   const separadorInstalar = document.getElementById('separadorInstalar');
   const btnLapizTemporal = document.getElementById('btnLapizTemporal');
@@ -1642,6 +1726,8 @@ class SelectionManagerCP {
 
   const panelLapiz = document.getElementById('panelLapiz');
   const panelResaltador = document.getElementById('panelResaltador');
+  const btnGoma = document.getElementById('btnGoma');
+  const panelGoma = document.getElementById('panelGoma');
   const panelFondo = document.getElementById('panelFondo');
 
   const btnCopiarCP = document.getElementById('btnCopiarCP');
@@ -1652,6 +1738,7 @@ class SelectionManagerCP {
   const grosorBtnsLapiz = document.querySelectorAll('#grosorLapiz .grosor-btn');
   const colorSwatchesResaltador = document.querySelectorAll('#coloresResaltador .color-swatch');
   const grosorBtnsResaltador = document.querySelectorAll('#grosorResaltador .grosor-btn');
+  const grosorBtnsGoma = document.querySelectorAll('#grosorGomaGrupo .grosor-btn');
   const swatchesFondo = document.querySelectorAll('#coloresFondo .color-swatch');
 
   // Instancias independientes
@@ -1787,6 +1874,10 @@ class SelectionManagerCP {
       togglePanel(btnResaltador, panelResaltador);
       return;
     }
+    if (tool === 'goma' && btnGoma.classList.contains('activo')) {
+      togglePanel(btnGoma, panelGoma);
+      return;
+    }
 
     Pizarra.setHerramienta(tool, 'principal');
     document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
@@ -1801,6 +1892,10 @@ class SelectionManagerCP {
       panelResaltador.classList.add('visible');
       panelResaltador.style.display = 'flex';
       posicionarPanel(btnResaltador, panelResaltador);
+    } else if (tool === 'goma') {
+      panelGoma.classList.add('visible');
+      panelGoma.style.display = 'flex';
+      posicionarPanel(btnGoma, panelGoma);
     } else if (tool === 'fondo') {
       panelFondo.classList.add('visible');
       panelFondo.style.display = 'flex';
@@ -1855,6 +1950,7 @@ class SelectionManagerCP {
 
   bindButton(btnLapiz, () => setTool('lapiz', btnLapiz));
   bindButton(btnResaltador, () => setTool('resaltador', btnResaltador));
+  bindButton(btnGoma, () => setTool('goma', btnGoma));
   bindButton(btnLinea, () => setTool('linea', btnLinea));
   bindButton(btnRectangulo, () => setTool('rectangulo', btnRectangulo));
   bindButton(btnSeleccion, () => setTool('seleccionar', btnSeleccion));
@@ -1938,6 +2034,10 @@ class SelectionManagerCP {
   });
   grosorBtnsResaltador.forEach(btn => {
     btn.addEventListener('click', e => { e.stopPropagation(); Pizarra.setResaltadorGrosor(btn.dataset.size); grosorBtnsResaltador.forEach(b => b.classList.remove('seleccionado')); btn.classList.add('seleccionado'); cerrarPaneles(); });
+    btn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); btn.click(); }, { passive: false });
+  });
+  grosorBtnsGoma.forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); Pizarra.setGrosorGoma(btn.dataset.size); grosorBtnsGoma.forEach(b => b.classList.remove('seleccionado')); btn.classList.add('seleccionado'); cerrarPaneles(); });
     btn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); btn.click(); }, { passive: false });
   });
   swatchesFondo.forEach(sw => {
@@ -2098,6 +2198,177 @@ class SelectionManagerCP {
     });
   }
 
+  // ======================================================================
+  // MÓDULO: GestorCuaderno
+  // Permite trabajar con varias "hojas" (páginas) tipo pestañas, y guardar/
+  // abrir el cuaderno completo como un archivo .pizarra (JSON), de modo que
+  // se pueda cerrar el navegador y retomar el trabajo después.
+  // ======================================================================
+  let paginas = [];
+  let paginaActivaIndex = 0;
+  let contadorPaginas = 0;
+
+  function crearPaginaVacia(nombre) {
+    contadorPaginas++;
+    return {
+      nombre: nombre || ('Página ' + contadorPaginas),
+      fondo: '#ffffff',
+      dibujo: null // dataURL PNG del contenido; null = página en blanco
+    };
+  }
+
+  function actualizarSwatchFondoSeleccionado(color) {
+    const c = (color || '#ffffff').toLowerCase();
+    swatchesFondo.forEach(s => s.classList.toggle('seleccionado', s.dataset.color.toLowerCase() === c));
+  }
+
+  // Guarda el contenido actual del lienzo dentro de los datos de la página activa
+  function ProcesoGuardarPaginaActual() {
+    if (!paginas[paginaActivaIndex]) return;
+    paginas[paginaActivaIndex].dibujo = Pizarra.getCanvasPrincipal().toDataURL('image/png');
+    paginas[paginaActivaIndex].fondo = Pizarra.getColorFondo();
+  }
+
+  // Carga en el lienzo el contenido guardado de la página indicada
+  function ProcesoCargarPagina(index) {
+    const pagina = paginas[index];
+    if (!pagina) return;
+    paginaActivaIndex = index;
+
+    Pizarra.setFondo(pagina.fondo || '#ffffff');
+    actualizarSwatchFondoSeleccionado(pagina.fondo || '#ffffff');
+
+    // Limpiar lápiz temporal al cambiar de hoja (es efímero, no pertenece a ninguna página)
+    Pizarra.limpiarTemporal();
+    desactivarVisualLapizTemporal();
+
+    const canvasP = Pizarra.getCanvasPrincipal();
+    const ctxDeCarga = canvasP.getContext('2d');
+    ctxDeCarga.clearRect(0, 0, canvasP.width, canvasP.height);
+
+    if (pagina.dibujo) {
+      const img = new Image();
+      img.onload = () => {
+        ctxDeCarga.drawImage(img, 0, 0);
+        Pizarra.inicializarHistorial();
+      };
+      img.src = pagina.dibujo;
+    } else {
+      Pizarra.inicializarHistorial();
+    }
+
+    RenderizarPestanas();
+  }
+
+  function ProcesoCambiarPagina(index) {
+    if (index === paginaActivaIndex) return;
+    ProcesoGuardarPaginaActual();
+    ProcesoCargarPagina(index);
+  }
+
+  function ProcesoNuevaPagina() {
+    ProcesoGuardarPaginaActual();
+    paginas.push(crearPaginaVacia());
+    ProcesoCargarPagina(paginas.length - 1);
+  }
+
+  function ProcesoEliminarPagina(index, evento) {
+    if (evento) evento.stopPropagation();
+    if (paginas.length <= 1) {
+      alert('El cuaderno debe tener al menos una página.');
+      return;
+    }
+    const nombre = paginas[index].nombre;
+    if (!confirm(`¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`)) return;
+
+    paginas.splice(index, 1);
+
+    if (paginaActivaIndex === index) {
+      ProcesoCargarPagina(Math.max(0, index - 1));
+    } else {
+      if (paginaActivaIndex > index) paginaActivaIndex--;
+      RenderizarPestanas();
+    }
+  }
+
+  function RenderizarPestanas() {
+    barraPestanas.innerHTML = '';
+    paginas.forEach((pagina, i) => {
+      const tab = document.createElement('div');
+      tab.className = 'pestana' + (i === paginaActivaIndex ? ' activa' : '');
+      tab.innerHTML = `<span>${pagina.nombre}</span><span class="cerrar-pestana" title="Eliminar página">&times;</span>`;
+      tab.addEventListener('click', () => ProcesoCambiarPagina(i));
+      tab.querySelector('.cerrar-pestana').addEventListener('click', (e) => ProcesoEliminarPagina(i, e));
+      barraPestanas.appendChild(tab);
+    });
+
+    const btnNueva = document.createElement('div');
+    btnNueva.className = 'btn-nueva-pestana';
+    btnNueva.title = 'Nueva página';
+    btnNueva.innerHTML = '<i class="fas fa-plus"></i>';
+    btnNueva.addEventListener('click', () => ProcesoNuevaPagina());
+    barraPestanas.appendChild(btnNueva);
+  }
+
+  // ===== Guardar cuaderno completo como archivo .pizarra =====
+  function ProcesoGuardarCuaderno() {
+    ProcesoGuardarPaginaActual();
+    const cuaderno = {
+      tipo: 'cuaderno-pizarra-jb',
+      version: 1,
+      autor: 'Mat. Edgar Johni Bustamante Romero, Ph.D.',
+      fecha: new Date().toISOString(),
+      paginaActivaIndex,
+      paginas: paginas.map(p => ({ nombre: p.nombre, fondo: p.fondo, dibujo: p.dibujo }))
+    };
+    const blob = new Blob([JSON.stringify(cuaderno)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const marca = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cuaderno-pizarra-${marca}.pizarra`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  // ===== Abrir cuaderno desde archivo .pizarra =====
+  function ProcesoAbrirCuaderno(file) {
+    if (!file) return;
+    const lector = new FileReader();
+    lector.onload = (e) => {
+      try {
+        const datos = JSON.parse(e.target.result);
+        if (!datos || !Array.isArray(datos.paginas) || datos.paginas.length === 0) {
+          alert('El archivo no parece un cuaderno válido de esta pizarra.');
+          return;
+        }
+        paginas = datos.paginas.map((p, i) => ({
+          nombre: p.nombre || ('Página ' + (i + 1)),
+          fondo: p.fondo || '#ffffff',
+          dibujo: p.dibujo || null
+        }));
+        contadorPaginas = paginas.length;
+        const indiceInicial = Number.isInteger(datos.paginaActivaIndex)
+          ? Math.min(Math.max(datos.paginaActivaIndex, 0), paginas.length - 1)
+          : 0;
+        ProcesoCargarPagina(indiceInicial);
+      } catch (err) {
+        alert('No se pudo abrir el cuaderno: el archivo está dañado o no tiene el formato correcto.');
+      }
+    };
+    lector.readAsText(file);
+  }
+
+  bindButton(btnGuardarCuaderno, () => ProcesoGuardarCuaderno());
+  bindButton(btnAbrirCuaderno, () => inputAbrirCuaderno.click());
+  inputAbrirCuaderno.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    ProcesoAbrirCuaderno(file);
+    inputAbrirCuaderno.value = '';
+  });
+
   // ===== Inicialización =====
   Pizarra.setHerramienta('lapiz', 'principal');
   Pizarra.setColor('#1a1a1a');
@@ -2112,6 +2383,11 @@ class SelectionManagerCP {
 
   [toggleGrupo1, toggleGrupo2].forEach(t => t.querySelector('i:first-child').className = 'fas fa-chevron-down');
   selectorCP.actualizarBotonCopiar();
+
+  // El cuaderno arranca con una sola página en blanco (la que ya está dibujada)
+  paginas = [crearPaginaVacia('Página 1')];
+  paginaActivaIndex = 0;
+  RenderizarPestanas();
 
   console.log('✅ Versión final: Manita y CP funcionan de forma independiente.');
 })();
