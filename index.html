@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Pizarra - J Bustamante - v.1 </title>
+  <title>Pizarra JBustamante</title>
 
   <!-- ===== PWA: manifest, ícono y color de tema ===== -->
   <link rel="manifest" href="./manifest.json">
@@ -19,12 +19,15 @@
   <style>
     /* ===== ESTILOS COMPLETOS ===== */
     * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
+    html, body {
+      height: 100%;
+      overflow: hidden; /* La pantalla se ajusta por escala: nunca hacen falta deslizadores del sistema */
+    }
     body {
       background: #f0f2f5;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
       font-family: 'Inter', sans-serif;
       touch-action: none;
     }
@@ -35,6 +38,8 @@
       padding: 12px;
       display: inline-block;
       position: relative;
+      transform-origin: center center;
+      transition: transform 0.15s ease;
     }
     .barra-superior {
       display: flex;
@@ -52,6 +57,22 @@
       z-index: 20;
       pointer-events: auto;
     }
+    .iconos-barra-superior {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+      max-width: 900px;
+      opacity: 1;
+      transition: max-width 0.3s ease, opacity 0.2s ease, margin 0.3s ease;
+    }
+    .iconos-barra-superior.contraida {
+      max-width: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #btnToggleBarraSuperior i { transition: transform 0.3s ease; }
+    #btnToggleBarraSuperior.contraido i { transform: rotate(180deg); }
     .barra-superior .btn-icon {
       width: 32px;
       height: 32px;
@@ -96,6 +117,23 @@
       touch-action: none;
       margin-top: 10px;
     }
+    /* ===== LUPA (efecto de aumento) ===== */
+    .lupa-overlay {
+      position: absolute;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.9);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.12);
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 50;
+      display: none;
+    }
+    .lupa-overlay canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
     /* ===== BARRA DE PESTAÑAS (Cuaderno multi-página) ===== */
     .barra-pestanas {
       display: flex;
@@ -362,30 +400,36 @@
       border: 1px solid rgba(255,255,255,0.5);
       pointer-events: none;
     }
-    @media (max-width: 1260px) { .pizarra-wrapper { transform: scale(0.8); } }
-    @media (max-width: 1000px) { .pizarra-wrapper { transform: scale(0.6); } }
+    /* El escalado ahora es dinámico (ver ProcesoAjustarPantalla en el script),
+       por eso ya no se usan media queries fijos aquí. */
   </style>
 </head>
 <body>
 <div class="pizarra-wrapper">
   <!-- BARRA SUPERIOR -->
   <div class="barra-superior" id="barraSuperior">
-    <button class="btn-icon" id="btnDeshacer" title="Deshacer" disabled><i class="fas fa-undo"></i></button>
-    <div class="separador-vertical"></div>
-    <button class="btn-icon" id="btnRehacer" title="Rehacer" disabled><i class="fas fa-redo"></i></button>
-    <div class="separador-vertical"></div>
-    <button class="btn-icon" id="btnCP" title="Copiar / Pegar / Eliminar"><i class="fas fa-vector-square"></i></button>
-    <div class="separador-vertical"></div>
-    <button class="btn-icon" id="btnLapizTemporal" title="Lápiz temporal (anotación rápida, 4px)"><i class="fas fa-pen-nib"></i></button>
-    <button class="btn-icon" id="btnBorrarTemporal" title="Borrar anotaciones del lápiz temporal"><i class="fas fa-trash"></i></button>
-    <div class="separador-vertical"></div>
-    <button class="btn-icon" id="btnImprimir" title="Imprimir pizarra"><i class="fas fa-print"></i></button>
-    <div class="separador-vertical"></div>
-    <button class="btn-icon" id="btnGuardarCuaderno" title="Guardar cuaderno (.pizarra)"><i class="fas fa-save"></i></button>
-    <button class="btn-icon" id="btnAbrirCuaderno" title="Abrir cuaderno (.pizarra)"><i class="fas fa-folder-open"></i></button>
-    <input type="file" id="inputAbrirCuaderno" accept=".pizarra,.json,application/json" style="display:none;">
-    <div class="separador-vertical" id="separadorInstalar" style="display:none;"></div>
-    <button class="btn-icon" id="btnInstalarApp" title="Instalar como aplicación" style="display:none;"><i class="fas fa-download"></i></button>
+    <button class="btn-icon" id="btnToggleBarraSuperior" title="Contraer / expandir menú"><i class="fas fa-chevron-left"></i></button>
+    <div class="separador-vertical" id="separadorToggle"></div>
+    <div class="iconos-barra-superior" id="iconosBarraSuperior">
+      <button class="btn-icon" id="btnDeshacer" title="Deshacer" disabled><i class="fas fa-undo"></i></button>
+      <div class="separador-vertical"></div>
+      <button class="btn-icon" id="btnRehacer" title="Rehacer" disabled><i class="fas fa-redo"></i></button>
+      <div class="separador-vertical"></div>
+      <button class="btn-icon" id="btnCP" title="Copiar / Pegar / Eliminar"><i class="fas fa-vector-square"></i></button>
+      <div class="separador-vertical"></div>
+      <button class="btn-icon" id="btnLapizTemporal" title="Lápiz temporal (anotación rápida, 4px)"><i class="fas fa-pen-nib"></i></button>
+      <button class="btn-icon" id="btnBorrarTemporal" title="Borrar anotaciones del lápiz temporal"><i class="fas fa-trash"></i></button>
+      <div class="separador-vertical"></div>
+      <button class="btn-icon" id="btnImprimir" title="Imprimir pizarra"><i class="fas fa-print"></i></button>
+      <div class="separador-vertical"></div>
+      <button class="btn-icon" id="btnGuardarCuaderno" title="Guardar cuaderno (.job)"><i class="fas fa-save"></i></button>
+      <button class="btn-icon" id="btnAbrirCuaderno" title="Abrir cuaderno (.job)"><i class="fas fa-folder-open"></i></button>
+      <input type="file" id="inputAbrirCuaderno" accept=".job,.pizarra,.json,application/json" style="display:none;">
+      <div class="separador-vertical"></div>
+      <button class="btn-icon" id="btnPantallaCompleta" title="Modo pantalla completa"><i class="fas fa-expand"></i></button>
+      <div class="separador-vertical" id="separadorInstalar" style="display:none;"></div>
+      <button class="btn-icon" id="btnInstalarApp" title="Instalar como aplicación" style="display:none;"><i class="fas fa-download"></i></button>
+    </div>
   </div>
 
   <div class="pizarra-container" id="pizarraContainer">
@@ -394,6 +438,11 @@
       <canvas id="canvasPrincipal" width="1200" height="700"></canvas>
       <canvas id="canvasTemporal" width="1200" height="700"></canvas>
       <canvas id="canvasGrid" width="1200" height="700"></canvas>
+    </div>
+
+    <!-- LUPA (efecto de aumento circular) -->
+    <div class="lupa-overlay" id="lupaOverlay">
+      <canvas id="lupaCanvas"></canvas>
     </div>
 
     <!-- BARRA LATERAL -->
@@ -420,8 +469,13 @@
           <button class="btn-icon" id="btnMover" data-herramienta="mover"><i class="fas fa-arrows-alt"></i></button>
           <button class="btn-icon" id="btnZoomIn"><i class="fas fa-plus-circle"></i></button>
           <button class="btn-icon" id="btnZoomOut"><i class="fas fa-minus-circle"></i></button>
+          <button class="btn-icon" id="btnLupa" data-herramienta="lupa" title="Lupa (radio 2cm)"><i class="fas fa-search-plus"></i></button>
         </div>
       </div>
+
+      <!-- Botones fijos: siempre visibles, fuera de los grupos retráctiles -->
+      <div class="separador"></div>
+      <button class="btn-icon" id="btnNeutro" data-herramienta="neutro" title="Modo neutro (no dibuja nada)"><i class="far fa-circle"></i></button>
     </div>
 
     <!-- PANELES FLOTANTES -->
@@ -470,10 +524,10 @@
 
     <div class="floating-panel" id="panelFondo">
       <div class="grupo-colores" id="coloresFondo">
-        <span class="color-swatch seleccionado" style="background:#ffffff;" data-color="#ffffff"></span>
+        <span class="color-swatch" style="background:#ffffff;" data-color="#ffffff"></span>
         <span class="color-swatch" style="background:#f0f0f0;" data-color="#f0f0f0"></span>
         <span class="color-swatch" style="background:#fce4b8;" data-color="#fce4b8"></span>
-        <span class="color-swatch" style="background:#d9e8f5;" data-color="#d9e8f5"></span>
+        <span class="color-swatch seleccionado" style="background:#d9e8f5;" data-color="#d9e8f5"></span>
         <span class="color-swatch" style="background:#c8e6c9;" data-color="#c8e6c9"></span>
         <span class="color-swatch" style="background:#000000;" data-color="#000000"></span>
       </div>
@@ -540,7 +594,7 @@ const Pizarra = (() => {
   let opacidadActivo = 1;
   let grosorGoma = 25;
   let tamanoRect = 40;
-  let fondoColor = '#ffffff';
+  let fondoColor = '#d9e8f5';
 
   // ----- HISTORIAL (10 pasos) -----
   const MAX_HIST = 10;
@@ -938,6 +992,8 @@ const Pizarra = (() => {
   function getColorFondo() { return fondoColor; }
   function getCanvasPrincipal() { return canvasP; }
   function getCanvasTemporal() { return canvasT; }
+  function getCanvasFondo() { return canvasFondo; }
+  function getCanvasGrid() { return canvasGrid; }
   function getContenedor() { return contenedor; }
 
   return {
@@ -966,6 +1022,8 @@ const Pizarra = (() => {
     getColorFondo,
     getCanvasPrincipal,
     getCanvasTemporal,
+    getCanvasFondo,
+    getCanvasGrid,
     getContenedor,
     actualizarBotonesHistorial,
     inicializarHistorial,
@@ -1693,6 +1751,7 @@ class SelectionManagerCP {
 // MÓDULO 4 – UI (con ambos selectores)
 // ======================================================================
 (function UI() {
+  const contenedor = Pizarra.getContenedor();
   const toggleGrupo1 = document.getElementById('toggleGrupo1');
   const toggleGrupo2 = document.getElementById('toggleGrupo2');
   const grupo1 = document.getElementById('grupo1');
@@ -1708,10 +1767,19 @@ class SelectionManagerCP {
   const btnMover = document.getElementById('btnMover');
   const btnZoomIn = document.getElementById('btnZoomIn');
   const btnZoomOut = document.getElementById('btnZoomOut');
+  const btnLupa = document.getElementById('btnLupa');
+  const lupaOverlay = document.getElementById('lupaOverlay');
+  const lupaCanvas = document.getElementById('lupaCanvas');
+  const ctxLupa = lupaCanvas.getContext('2d');
+  const btnNeutro = document.getElementById('btnNeutro');
   const btnDeshacer = document.getElementById('btnDeshacer');
   const btnRehacer = document.getElementById('btnRehacer');
   const btnCP = document.getElementById('btnCP');
   const btnImprimir = document.getElementById('btnImprimir');
+  const btnToggleBarraSuperior = document.getElementById('btnToggleBarraSuperior');
+  const iconosBarraSuperior = document.getElementById('iconosBarraSuperior');
+  const separadorToggle = document.getElementById('separadorToggle');
+  const btnPantallaCompleta = document.getElementById('btnPantallaCompleta');
   const btnGuardarCuaderno = document.getElementById('btnGuardarCuaderno');
   const btnAbrirCuaderno = document.getElementById('btnAbrirCuaderno');
   const inputAbrirCuaderno = document.getElementById('inputAbrirCuaderno');
@@ -2201,7 +2269,7 @@ class SelectionManagerCP {
   // ======================================================================
   // MÓDULO: GestorCuaderno
   // Permite trabajar con varias "hojas" (páginas) tipo pestañas, y guardar/
-  // abrir el cuaderno completo como un archivo .pizarra (JSON), de modo que
+  // abrir el cuaderno completo como un archivo .job (JSON), de modo que
   // se pueda cerrar el navegador y retomar el trabajo después.
   // ======================================================================
   let paginas = [];
@@ -2212,7 +2280,7 @@ class SelectionManagerCP {
     contadorPaginas++;
     return {
       nombre: nombre || ('Página ' + contadorPaginas),
-      fondo: '#ffffff',
+      fondo: '#d9e8f5',
       dibujo: null // dataURL PNG del contenido; null = página en blanco
     };
   }
@@ -2310,7 +2378,7 @@ class SelectionManagerCP {
     barraPestanas.appendChild(btnNueva);
   }
 
-  // ===== Guardar cuaderno completo como archivo .pizarra =====
+  // ===== Guardar cuaderno completo como archivo .job =====
   function ProcesoGuardarCuaderno() {
     ProcesoGuardarPaginaActual();
     const cuaderno = {
@@ -2326,14 +2394,14 @@ class SelectionManagerCP {
     const marca = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cuaderno-pizarra-${marca}.pizarra`;
+    a.download = `cuaderno-pizarra-${marca}.job`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
-  // ===== Abrir cuaderno desde archivo .pizarra =====
+  // ===== Abrir cuaderno desde archivo .job (compatible también con .pizarra) =====
   function ProcesoAbrirCuaderno(file) {
     if (!file) return;
     const lector = new FileReader();
@@ -2369,12 +2437,209 @@ class SelectionManagerCP {
     inputAbrirCuaderno.value = '';
   });
 
+  // ======================================================================
+  // PROCESO: ProcesoToggleBarraSuperior
+  // Contrae/expande el menú horizontal para liberar espacio en pantalla.
+  // ======================================================================
+  function ProcesoToggleBarraSuperior() {
+    const contraido = iconosBarraSuperior.classList.toggle('contraida');
+    btnToggleBarraSuperior.classList.toggle('contraido', contraido);
+    separadorToggle.style.display = contraido ? 'none' : 'block';
+    btnToggleBarraSuperior.title = contraido ? 'Expandir menú' : 'Contraer menú';
+  }
+  bindButton(btnToggleBarraSuperior, () => ProcesoToggleBarraSuperior());
+
+  // ======================================================================
+  // PROCESO: ProcesoPantallaCompleta
+  // Activa/desactiva el modo de pantalla completa del navegador.
+  // ======================================================================
+  function ProcesoPantallaCompleta() {
+    const elemento = document.documentElement;
+    const enPantallaCompleta = document.fullscreenElement || document.webkitFullscreenElement;
+
+    if (!enPantallaCompleta) {
+      const solicitar = elemento.requestFullscreen || elemento.webkitRequestFullscreen;
+      if (solicitar) {
+        solicitar.call(elemento).catch(err => {
+          alert('No se pudo activar la pantalla completa: ' + err.message);
+        });
+      }
+    } else {
+      const salir = document.exitFullscreen || document.webkitExitFullscreen;
+      if (salir) salir.call(document);
+    }
+  }
+  bindButton(btnPantallaCompleta, () => ProcesoPantallaCompleta());
+
+  function actualizarIconoPantallaCompleta() {
+    const activo = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    const icono = btnPantallaCompleta.querySelector('i');
+    icono.className = activo ? 'fas fa-compress' : 'fas fa-expand';
+    btnPantallaCompleta.title = activo ? 'Salir de pantalla completa' : 'Modo pantalla completa';
+  }
+  document.addEventListener('fullscreenchange', actualizarIconoPantallaCompleta);
+  document.addEventListener('webkitfullscreenchange', actualizarIconoPantallaCompleta);
+
+  // ===== Herramienta "Neutro" =====
+  // Botón en blanco: al activarlo, ninguna herramienta de dibujo queda
+  // seleccionada. El lienzo no reacciona a clics ni trazos: es un estado
+  // de "pausa" para mover la vista o simplemente no dibujar por accidente.
+  bindButton(btnNeutro, () => setTool('neutro', btnNeutro));
+
+  // ======================================================================
+  // PROCESO: ProcesoAjustarPantalla
+  // Escala todo el pizarrón (menús + hoja + pestañas) para que quepa por
+  // completo en la ventana visible, sin importar el tamaño de pantalla.
+  // Así se elimina la necesidad de cualquier deslizador (scroll) del
+  // sistema, tanto vertical como horizontal.
+  // ======================================================================
+  const pizarraWrapper = document.querySelector('.pizarra-wrapper');
+  let anchoNaturalWrapper = null;
+  let altoNaturalWrapper = null;
+
+  function ProcesoAjustarPantalla() {
+    if (anchoNaturalWrapper === null) {
+      const transformPrevia = pizarraWrapper.style.transform;
+      pizarraWrapper.style.transform = 'none';
+      const rect = pizarraWrapper.getBoundingClientRect();
+      anchoNaturalWrapper = rect.width;
+      altoNaturalWrapper = rect.height;
+      pizarraWrapper.style.transform = transformPrevia;
+    }
+
+    const margen = 16; // pequeño respiro para que no quede pegado a los bordes
+    const escalaAncho = (window.innerWidth - margen) / anchoNaturalWrapper;
+    const escalaAlto = (window.innerHeight - margen) / altoNaturalWrapper;
+    const escala = Math.min(1, escalaAncho, escalaAlto); // nunca agranda más allá del 100%
+
+    pizarraWrapper.style.transform = `scale(${escala})`;
+  }
+
+  window.addEventListener('resize', ProcesoAjustarPantalla);
+  window.addEventListener('orientationchange', ProcesoAjustarPantalla);
+  window.addEventListener('load', ProcesoAjustarPantalla);
+  ProcesoAjustarPantalla();
+
+  // ===== Título con fecha actual (versión) =====
+  (function actualizarTituloConFecha() {
+    const hoy = new Date();
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const yyyy = hoy.getFullYear();
+    document.title = `Pizarra JBustamante [v: ${dd}/${mm}/${yyyy}]`;
+  })();
+
+  // ======================================================================
+  // MÓDULO: Lupa (efecto de aumento circular)
+  // Muestra, mientras se arrastra el dedo/mouse con la herramienta activa,
+  // un círculo de radio ~2cm con una vista aumentada de esa zona exacta
+  // del pizarrón (fondo + dibujo + lápiz temporal + cuadrícula).
+  // ======================================================================
+  const LUPA_RADIO_CM = 2;
+  const PX_POR_CM = 37.8; // aproximación estándar: 96px/pulgada ÷ 2.54cm/pulgada
+  const LUPA_RADIO_PX = Math.round(LUPA_RADIO_CM * PX_POR_CM); // ≈ 76px
+  const LUPA_DIAMETRO_PX = LUPA_RADIO_PX * 2;
+  const LUPA_ZOOM = 2.2; // cuánto se aumenta el contenido dentro de la lupa
+
+  // Tamaño físico del lente (constante, independiente del zoom del lienzo)
+  lupaOverlay.style.width = LUPA_DIAMETRO_PX + 'px';
+  lupaOverlay.style.height = LUPA_DIAMETRO_PX + 'px';
+  lupaCanvas.width = LUPA_DIAMETRO_PX;
+  lupaCanvas.height = LUPA_DIAMETRO_PX;
+
+  let lupaArrastrando = false;
+
+  function ProcesoActivarLupa() {
+    const yaActiva = btnLupa.classList.contains('activo');
+    if (yaActiva) {
+      btnLupa.classList.remove('activo');
+      lupaOverlay.style.display = 'none';
+      setTool('lapiz', btnLapiz);
+      return;
+    }
+    setTool('lupa', btnLupa);
+  }
+  bindButton(btnLupa, () => ProcesoActivarLupa());
+
+  // Si se activa cualquier otra herramienta del menú vertical, ocultar la lupa
+  barraLateral.addEventListener('click', () => {
+    if (!btnLupa.classList.contains('activo')) {
+      lupaOverlay.style.display = 'none';
+      lupaArrastrando = false;
+    }
+  });
+
+  function coordenadasLupa(e) {
+    const rect = contenedor.getBoundingClientRect();
+    const scaleX = Pizarra.W / rect.width;
+    const scaleY = Pizarra.H / rect.height;
+    let cx, cy;
+    if (e.touches && e.touches.length) {
+      cx = e.touches[0].clientX; cy = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length) {
+      cx = e.changedTouches[0].clientX; cy = e.changedTouches[0].clientY;
+    } else {
+      cx = e.clientX; cy = e.clientY;
+    }
+    const xLocal = (cx - rect.left) * scaleX; // posición dentro del contenedor (para ubicar el lente)
+    const yLocal = (cy - rect.top) * scaleY;
+    const { zoom, panX, panY } = Pizarra.getTransform();
+    const xCanvas = (xLocal - panX) / zoom; // posición real en el lienzo (para recortar el contenido)
+    const yCanvas = (yLocal - panY) / zoom;
+    return { xLocal, yLocal, xCanvas, yCanvas };
+  }
+
+  function dibujarLupa(xCanvas, yCanvas) {
+    const { zoom } = Pizarra.getTransform();
+    // Si el lienzo ya está con zoom aplicado, cada píxel del canvas ocupa
+    // más (o menos) espacio en pantalla; hay que compensarlo para que el
+    // aumento de la lupa sea siempre el mismo, sin importar el zoom del lienzo.
+    const radioFuente = LUPA_RADIO_PX / (LUPA_ZOOM * zoom);
+    const sx = xCanvas - radioFuente;
+    const sy = yCanvas - radioFuente;
+    const s = radioFuente * 2;
+
+    ctxLupa.clearRect(0, 0, LUPA_DIAMETRO_PX, LUPA_DIAMETRO_PX);
+    // Se recompone en el mismo orden visual: fondo → dibujo → lápiz temporal → cuadrícula
+    [Pizarra.getCanvasFondo(), Pizarra.getCanvasPrincipal(), Pizarra.getCanvasTemporal(), Pizarra.getCanvasGrid()]
+      .forEach(capa => ctxLupa.drawImage(capa, sx, sy, s, s, 0, 0, LUPA_DIAMETRO_PX, LUPA_DIAMETRO_PX));
+  }
+
+  function actualizarLupa(e) {
+    const { xLocal, yLocal, xCanvas, yCanvas } = coordenadasLupa(e);
+    lupaOverlay.style.left = (xLocal - LUPA_RADIO_PX) + 'px';
+    lupaOverlay.style.top = (yLocal - LUPA_RADIO_PX) + 'px';
+    dibujarLupa(xCanvas, yCanvas);
+  }
+
+  function lupaPointerDown(e) {
+    if (!btnLupa.classList.contains('activo')) return;
+    lupaArrastrando = true;
+    lupaOverlay.style.display = 'block';
+    actualizarLupa(e);
+  }
+  function lupaPointerMove(e) {
+    if (!btnLupa.classList.contains('activo') || !lupaArrastrando) return;
+    actualizarLupa(e);
+  }
+  function lupaPointerUp() {
+    lupaArrastrando = false;
+    if (btnLupa.classList.contains('activo')) lupaOverlay.style.display = 'none';
+  }
+
+  contenedor.addEventListener('mousedown', lupaPointerDown);
+  contenedor.addEventListener('touchstart', lupaPointerDown, { passive: false });
+  window.addEventListener('mousemove', lupaPointerMove);
+  window.addEventListener('touchmove', lupaPointerMove, { passive: false });
+  window.addEventListener('mouseup', lupaPointerUp);
+  window.addEventListener('touchend', lupaPointerUp);
+
   // ===== Inicialización =====
   Pizarra.setHerramienta('lapiz', 'principal');
   Pizarra.setColor('#1a1a1a');
   Pizarra.setGrosor(3, 'principal');
   Pizarra.setOpacidad(100, 'principal');
-  Pizarra.setFondo('#ffffff');
+  Pizarra.setFondo('#d9e8f5');
   panelLapiz.classList.add('visible');
   panelLapiz.style.display = 'flex';
   posicionarPanel(btnLapiz, panelLapiz);
