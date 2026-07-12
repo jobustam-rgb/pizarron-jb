@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Pizarrón 2 · Vista para estudiantes</title>
+
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#1a2634">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    /* ===== Base compartida con el Pizarrón 1, para verse exactamente igual ===== */
+    * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Inter', sans-serif;
+      touch-action: none;
+    }
+    .pizarra-wrapper {
+      background: #ffffff;
+      border-radius: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.05);
+      padding: 12px;
+      display: inline-block;
+      position: relative;
+      transform-origin: center center;
+      transition: transform 0.15s ease;
+    }
+    .pizarra-container {
+      position: relative;
+      width: 1200px;
+      height: 700px;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #fafafa;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.04);
+      touch-action: none;
+    }
+    .pizarra-viewport {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      transform-origin: 0 0;
+      transition: transform 0.1s ease-out;
+      will-change: transform;
+    }
+    .pizarra-viewport canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border-radius: 20px;
+      touch-action: none;
+      pointer-events: none;
+    }
+    #canvasContenido { background: #ffffff; z-index: 1; }
+    #canvasMarcador { z-index: 2; display: none; }
+
+    .firma {
+      position: absolute;
+      bottom: 12px;
+      right: 20px;
+      z-index: 20;
+      font-size: 13px;
+      color: #8a96a8;
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(4px);
+      padding: 4px 14px;
+      border-radius: 30px;
+      border: 1px solid rgba(255,255,255,0.5);
+      pointer-events: none;
+    }
+
+    /* ===== Mensaje mientras no llega contenido ===== */
+    #mensajeEspera {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      color: #8a96a8;
+      font-size: 15px;
+      z-index: 15;
+      text-align: center;
+      padding: 20px;
+    }
+    #mensajeEspera i { font-size: 28px; opacity: 0.5; }
+
+    /* ===== Indicador discreto de conexión ===== */
+    .indicador-estado {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      color: #8a96a8;
+      background: rgba(255,255,255,0.75);
+      backdrop-filter: blur(4px);
+      padding: 4px 12px 4px 8px;
+      border-radius: 30px;
+      border: 1px solid rgba(255,255,255,0.5);
+    }
+    .indicador-estado .punto {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #b6bfc9;
+      transition: background 0.3s ease;
+    }
+    .indicador-estado.activo .punto { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.6); }
+    .indicador-estado.inactivo .punto { background: #f59e0b; }
+
+    /* ===== Controles discretos del Pizarrón 2 (zoom / mover) ===== */
+    .controles-espejo {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      gap: 4px;
+      background: rgba(255,255,255,0.55);
+      backdrop-filter: blur(6px);
+      padding: 4px;
+      border-radius: 30px;
+      opacity: 0.35;
+      transition: opacity 0.25s ease;
+    }
+    .controles-espejo:hover { opacity: 1; }
+    .controles-espejo button {
+      width: 26px; height: 26px;
+      border: none;
+      background: transparent;
+      color: #5a6a7a;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .controles-espejo button:hover { background: rgba(0,0,0,0.08); }
+    .controles-espejo button.activo {
+      background: #1a2634;
+      color: #ffffff;
+    }
+
+    @media (max-width: 1260px) { /* el ajuste real de escala lo hace JS, esto es solo un respaldo inicial */ }
+  </style>
+</head>
+<body>
+
+  <div class="pizarra-wrapper" id="wrapperEspejo">
+    <div class="pizarra-container" id="pizarraContainer">
+
+      <div class="pizarra-viewport" id="viewportEspejo">
+        <canvas id="canvasContenido" width="1200" height="700"></canvas>
+        <canvas id="canvasMarcador" width="1200" height="700"></canvas>
+      </div>
+
+      <div id="mensajeEspera">
+        <i class="fas fa-chalkboard"></i>
+        <div>Esperando contenido del Pizarrón 1…</div>
+      </div>
+
+      <div class="indicador-estado inactivo" id="indicadorEstado" title="Esperando la primera actualización">
+        <span class="punto"></span>
+        <span>Pizarrón 2</span>
+      </div>
+
+      <div class="controles-espejo">
+        <button id="btnZoomOutEspejo" title="Alejar (solo en esta pantalla)"><i class="fas fa-minus"></i></button>
+        <button id="btnMoverEspejo" title="Mover la vista (solo en esta pantalla)"><i class="fas fa-arrows-alt"></i></button>
+        <button id="btnZoomInEspejo" title="Acercar (solo en esta pantalla)"><i class="fas fa-plus"></i></button>
+      </div>
+
+      <div class="firma">Mat. Edgar Johni Bustamante Romero, Ph.D.</div>
+    </div>
+  </div>
+
+<script>
+(function PizarronEspejo() {
+  // ===== Constantes compartidas con el Pizarrón 1 (deben coincidir exactamente) =====
+  const W = 1200, H = 700;
+  const CM_A_PX = 37.795;
+  const MARCADOR_ANCHO_TABLERO = 3 * CM_A_PX;
+  const MARCADOR_ALTO_TABLERO = 1.5 * CM_A_PX;
+  const CANAL_SYNC = 'pizarron-jb-sync';
+  const CLAVE_CONTENIDO = 'pizarron_jb_sync_contenido';
+  const CLAVE_MARCADOR = 'pizarron_jb_sync_marcador';
+
+  const contenedor = document.getElementById('pizarraContainer');
+  const viewport = document.getElementById('viewportEspejo');
+  const canvasContenido = document.getElementById('canvasContenido');
+  const ctxContenido = canvasContenido.getContext('2d');
+  const canvasMarcador = document.getElementById('canvasMarcador');
+  const ctxMarcador = canvasMarcador.getContext('2d');
+  const mensajeEspera = document.getElementById('mensajeEspera');
+  const indicadorEstado = document.getElementById('indicadorEstado');
+  const btnZoomInEspejo = document.getElementById('btnZoomInEspejo');
+  const btnZoomOutEspejo = document.getElementById('btnZoomOutEspejo');
+  const btnMoverEspejo = document.getElementById('btnMoverEspejo');
+
+  // ======================================================================
+  // Zoom / mover LOCALES: solo cambian cómo se ve este Pizarrón 2 en esta
+  // pantalla. No afectan ni se comunican de vuelta al Pizarrón 1.
+  // ======================================================================
+  let zoom = 1, panX = 0, panY = 0;
+  function actualizarTransform() {
+    viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+  }
+  function zoomIn() { zoom = Math.min(3, zoom + 0.1); actualizarTransform(); }
+  function zoomOut() { zoom = Math.max(0.3, zoom - 0.1); actualizarTransform(); }
+  btnZoomInEspejo.addEventListener('click', zoomIn);
+  btnZoomOutEspejo.addEventListener('click', zoomOut);
+
+  let modoMover = false;
+  let isPanning = false;
+  let panStartX = 0, panStartY = 0;
+
+  function activarMover() {
+    modoMover = !modoMover;
+    btnMoverEspejo.classList.toggle('activo', modoMover);
+    contenedor.style.cursor = modoMover ? 'grab' : 'default';
+  }
+  btnMoverEspejo.addEventListener('click', activarMover);
+
+  function onDown(e) {
+    if (!modoMover) return;
+    isPanning = true;
+    const ev = e.touches ? e.touches[0] : e;
+    panStartX = ev.clientX; panStartY = ev.clientY;
+    contenedor.style.cursor = 'grabbing';
+  }
+  function onMove(e) {
+    if (!isPanning) return;
+    const ev = e.touches ? e.touches[0] : e;
+    panX += ev.clientX - panStartX;
+    panY += ev.clientY - panStartY;
+    panStartX = ev.clientX; panStartY = ev.clientY;
+    actualizarTransform();
+    if (e.touches) e.preventDefault();
+  }
+  function onUp() {
+    isPanning = false;
+    if (modoMover) contenedor.style.cursor = 'grab';
+  }
+  contenedor.addEventListener('mousedown', onDown);
+  contenedor.addEventListener('touchstart', onDown, { passive: false });
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('mouseup', onUp);
+  window.addEventListener('touchend', onUp);
+
+  // ======================================================================
+  // Recepción de contenido del Pizarrón 1 (imagen ya compuesta: fondo +
+  // dibujo + lápiz temporal, exactamente lo que ve el profesor).
+  // ======================================================================
+  let ultimoTs = 0;
+  let temporizadorInactividad = null;
+
+  function marcarActividad() {
+    mensajeEspera.style.display = 'none';
+    indicadorEstado.classList.remove('inactivo');
+    indicadorEstado.classList.add('activo');
+    indicadorEstado.title = 'Recibiendo del Pizarrón 1';
+    clearTimeout(temporizadorInactividad);
+    temporizadorInactividad = setTimeout(() => {
+      indicadorEstado.classList.remove('activo');
+      indicadorEstado.classList.add('inactivo');
+      indicadorEstado.title = 'Sin actualizaciones recientes: pide al profesor que use el botón "Actualizar"';
+    }, 8000);
+  }
+
+  function aplicarContenido(datos) {
+    if (!datos || !datos.imagen) return;
+    if ((datos.ts || 0) < ultimoTs) return; // ignora datos desordenados/viejos
+    ultimoTs = datos.ts || ultimoTs;
+    const img = new Image();
+    img.onload = () => {
+      ctxContenido.clearRect(0, 0, W, H);
+      ctxContenido.drawImage(img, 0, 0);
+      marcarActividad();
+    };
+    img.src = datos.imagen;
+  }
+
+  // ======================================================================
+  // Recepción del marcador de posición (rectángulo sombreado).
+  // Se dibuja directamente en coordenadas del tablero: como este canvas
+  // vive dentro del mismo #viewport con zoom/pan propios, el navegador se
+  // encarga solo de posicionarlo y escalarlo correctamente en pantalla.
+  // ======================================================================
+  let marcadorVisible = false;
+  let centroRecibido = { x: W / 2, y: H / 2 };
+  let anchoRecibido = MARCADOR_ANCHO_TABLERO;
+  let altoRecibido = MARCADOR_ALTO_TABLERO;
+
+  function dibujarMarcador() {
+    ctxMarcador.clearRect(0, 0, W, H);
+    if (!marcadorVisible) {
+      canvasMarcador.style.display = 'none';
+      return;
+    }
+    canvasMarcador.style.display = 'block';
+    const x = centroRecibido.x - anchoRecibido / 2;
+    const y = centroRecibido.y - altoRecibido / 2;
+    ctxMarcador.save();
+    ctxMarcador.fillStyle = 'rgba(37, 99, 235, 0.14)';
+    ctxMarcador.strokeStyle = 'rgba(37, 99, 235, 0.55)';
+    ctxMarcador.lineWidth = 2;
+    ctxMarcador.beginPath();
+    ctxMarcador.roundRect(x, y, anchoRecibido, altoRecibido, 10);
+    ctxMarcador.fill();
+    ctxMarcador.stroke();
+    ctxMarcador.restore();
+  }
+
+  function aplicarMarcador(datos) {
+    if (!datos) return;
+    marcadorVisible = !!datos.visible;
+    centroRecibido = { x: datos.x, y: datos.y };
+    anchoRecibido = datos.ancho || MARCADOR_ANCHO_TABLERO;
+    altoRecibido = datos.alto || MARCADOR_ALTO_TABLERO;
+    dibujarMarcador();
+  }
+
+  // ======================================================================
+  // Canal de sincronización: BroadcastChannel (en vivo) + localStorage
+  // como respaldo, útil si el navegador no soporta BroadcastChannel o si
+  // esta pestaña se abrió después de que el Pizarrón 1 ya transmitió algo.
+  // ======================================================================
+  const canalSync = ('BroadcastChannel' in window) ? new BroadcastChannel(CANAL_SYNC) : null;
+  if (canalSync) {
+    canalSync.onmessage = (ev) => {
+      const datos = ev.data;
+      if (!datos) return;
+      if (datos.tipo === 'contenido') aplicarContenido(datos);
+      else if (datos.tipo === 'marcador') aplicarMarcador(datos);
+    };
+  }
+
+  window.addEventListener('storage', (ev) => {
+    if (ev.key === CLAVE_CONTENIDO && ev.newValue) {
+      try { aplicarContenido(JSON.parse(ev.newValue)); } catch (e) { /* dato inválido, se ignora */ }
+    } else if (ev.key === CLAVE_MARCADOR && ev.newValue) {
+      try { aplicarMarcador(JSON.parse(ev.newValue)); } catch (e) { /* dato inválido, se ignora */ }
+    }
+  });
+
+  // Estado inicial: recuperar lo último transmitido, por si el Pizarrón 1
+  // ya tenía contenido antes de abrir esta pestaña.
+  try {
+    const contenidoGuardado = localStorage.getItem(CLAVE_CONTENIDO);
+    if (contenidoGuardado) aplicarContenido(JSON.parse(contenidoGuardado));
+  } catch (e) { /* sin datos previos */ }
+  try {
+    const marcadorGuardado = localStorage.getItem(CLAVE_MARCADOR);
+    if (marcadorGuardado) aplicarMarcador(JSON.parse(marcadorGuardado));
+  } catch (e) { /* sin datos previos */ }
+
+  // ======================================================================
+  // Ajuste de pantalla: igual que en el Pizarrón 1, todo se escala para
+  // caber sin necesitar deslizadores del sistema.
+  // ======================================================================
+  const wrapperEspejo = document.getElementById('wrapperEspejo');
+  let anchoNatural = null, altoNatural = null;
+
+  function ajustarPantalla() {
+    if (anchoNatural === null) {
+      const transformPrevia = wrapperEspejo.style.transform;
+      wrapperEspejo.style.transform = 'none';
+      const rect = wrapperEspejo.getBoundingClientRect();
+      anchoNatural = rect.width;
+      altoNatural = rect.height;
+      wrapperEspejo.style.transform = transformPrevia;
+    }
+    const margen = 16;
+    const escala = Math.min(1, (window.innerWidth - margen) / anchoNatural, (window.innerHeight - margen) / altoNatural);
+    wrapperEspejo.style.transform = `scale(${escala})`;
+  }
+  window.addEventListener('resize', ajustarPantalla);
+  window.addEventListener('orientationchange', ajustarPantalla);
+  window.addEventListener('load', ajustarPantalla);
+  ajustarPantalla();
+
+  actualizarTransform();
+
+  // ===== Título con fecha actual =====
+  (function actualizarTitulo() {
+    const hoy = new Date();
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const yyyy = hoy.getFullYear();
+    document.title = `Pizarrón 2 · JoBustamante [v: ${dd}/${mm}/${yyyy}]`;
+  })();
+})();
+</script>
+</body>
+</html>
