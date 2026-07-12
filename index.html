@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Pizarra JBustamante</title>
+  <title>Pizarra JoBustamante</title>
 
   <!-- ===== PWA: manifest, ícono y color de tema ===== -->
   <link rel="manifest" href="./manifest.json">
@@ -2126,20 +2126,14 @@ class SelectionManagerCP {
   // usando el contenido actual del canvas principal, con marca de autoría.
   // ======================================================================
   function ProcesoImprimirPizarra() {
-    const canvasP = Pizarra.getCanvasPrincipal();
-    const fondo = Pizarra.getColorFondo();
+    // Asegurar que la página visible en este momento quede guardada en el
+    // arreglo de páginas antes de armar la impresión completa.
+    ProcesoGuardarPaginaActual();
 
-    // Lienzo temporal para asegurar fondo sólido (por si hay transparencia)
-    const canvasExport = document.createElement('canvas');
-    canvasExport.width = canvasP.width;
-    canvasExport.height = canvasP.height;
-    const ctxExport = canvasExport.getContext('2d');
-    ctxExport.fillStyle = fondo || '#ffffff';
-    ctxExport.fillRect(0, 0, canvasExport.width, canvasExport.height);
-    ctxExport.drawImage(canvasP, 0, 0);
-
-    const imagenDataUrl = canvasExport.toDataURL('image/png');
+    const anchoCanvas = Pizarra.W;
+    const altoCanvas = Pizarra.H;
     const fecha = new Date().toLocaleDateString('es-EC', { year: 'numeric', month: 'long', day: 'numeric' });
+    const totalPaginas = paginas.length;
 
     const ventana = window.open('', '_blank');
     if (!ventana) {
@@ -2147,81 +2141,118 @@ class SelectionManagerCP {
       return;
     }
 
-    ventana.document.write(`
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8">
-        <title>Impresión · Pizarra</title>
-        <style>
-          @page { size: landscape; margin: 12mm; }
-          * { margin:0; padding:0; box-sizing:border-box; }
-          body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            padding: 20px;
-          }
-          .hoja {
-            width: 100%;
-            max-width: 1200px;
-          }
-          .encabezado {
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            border-bottom: 2px solid #1a2634;
-            padding-bottom: 8px;
-            margin-bottom: 14px;
-          }
-          .encabezado h1 {
-            font-size: 16px;
-            color:#1a2634;
-            font-weight:600;
-          }
-          .encabezado span {
-            font-size: 12px;
-            color:#6a7a8a;
-          }
-          .imagen-pizarra {
-            width: 100%;
-            border: 1px solid #d0d7e2;
-            border-radius: 8px;
-            display:block;
-          }
-          .pie {
-            margin-top: 14px;
-            text-align:center;
-            font-size: 11px;
-            color:#8a97a6;
-            letter-spacing: 0.02em;
-          }
-          @media print {
-            body { padding: 0; }
-            .encabezado, .pie { color:#000 !important; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="hoja">
-          <div class="encabezado">
-            <h1>Pizarra Digital</h1>
-            <span>${fecha}</span>
+    const hojasHtml = new Array(totalPaginas);
+    let hojasListas = 0;
+
+    function escribirVentanaSiListo() {
+      if (hojasListas < totalPaginas) return;
+
+      ventana.document.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <title>Impresión · Cuaderno Pizarra</title>
+          <style>
+            @page { size: landscape; margin: 12mm; }
+            * { margin:0; padding:0; box-sizing:border-box; }
+            body {
+              font-family: 'Segoe UI', Arial, sans-serif;
+              display:flex;
+              flex-direction:column;
+              align-items:center;
+              padding: 20px;
+            }
+            .hoja {
+              width: 100%;
+              max-width: 1200px;
+              margin-bottom: 20px;
+            }
+            .encabezado {
+              display:flex;
+              justify-content:space-between;
+              align-items:center;
+              border-bottom: 2px solid #1a2634;
+              padding-bottom: 8px;
+              margin-bottom: 14px;
+            }
+            .encabezado h1 {
+              font-size: 16px;
+              color:#1a2634;
+              font-weight:600;
+            }
+            .encabezado span {
+              font-size: 12px;
+              color:#6a7a8a;
+            }
+            .imagen-pizarra {
+              width: 100%;
+              border: 1px solid #d0d7e2;
+              border-radius: 8px;
+              display:block;
+            }
+            .pie {
+              margin-top: 14px;
+              text-align:center;
+              font-size: 11px;
+              color:#8a97a6;
+              letter-spacing: 0.02em;
+            }
+            @media print {
+              body { padding: 0; }
+              .encabezado, .pie { color:#000 !important; }
+              .hoja { margin-bottom: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          ${hojasHtml.join('\n')}
+          <script>
+            window.onload = function() {
+              window.focus();
+              window.print();
+            };
+          <\/script>
+        </body>
+        </html>
+      `);
+      ventana.document.close();
+    }
+
+    paginas.forEach((pagina, index) => {
+      // Lienzo temporal por página: fondo sólido + dibujo (por si hay transparencia)
+      const canvasExport = document.createElement('canvas');
+      canvasExport.width = anchoCanvas;
+      canvasExport.height = altoCanvas;
+      const ctxExport = canvasExport.getContext('2d');
+      ctxExport.fillStyle = pagina.fondo || '#ffffff';
+      ctxExport.fillRect(0, 0, anchoCanvas, altoCanvas);
+
+      const construirHoja = () => {
+        const imagenDataUrl = canvasExport.toDataURL('image/png');
+        const esUltima = index === totalPaginas - 1;
+        hojasHtml[index] = `
+          <div class="hoja" style="${esUltima ? '' : 'page-break-after: always;'}">
+            <div class="encabezado">
+              <h1>Pizarra Digital — ${pagina.nombre}</h1>
+              <span>${fecha} · Página ${index + 1} de ${totalPaginas}</span>
+            </div>
+            <img class="imagen-pizarra" src="${imagenDataUrl}" alt="Contenido de ${pagina.nombre}">
+            <div class="pie">Mat. Edgar Johni Bustamante Romero, Ph.D.</div>
           </div>
-          <img class="imagen-pizarra" src="${imagenDataUrl}" alt="Contenido de la pizarra">
-          <div class="pie">Mat. Edgar Johni Bustamante Romero, Ph.D.</div>
-        </div>
-        <script>
-          window.onload = function() {
-            window.focus();
-            window.print();
-          };
-        <\/script>
-      </body>
-      </html>
-    `);
-    ventana.document.close();
+        `;
+        hojasListas++;
+        escribirVentanaSiListo();
+      };
+
+      if (pagina.dibujo) {
+        const img = new Image();
+        img.onload = () => { ctxExport.drawImage(img, 0, 0); construirHoja(); };
+        img.src = pagina.dibujo;
+      } else {
+        construirHoja();
+      }
+    });
   }
 
   // ======================================================================
@@ -2526,7 +2557,7 @@ class SelectionManagerCP {
     const dd = String(hoy.getDate()).padStart(2, '0');
     const mm = String(hoy.getMonth() + 1).padStart(2, '0');
     const yyyy = hoy.getFullYear();
-    document.title = `Pizarra JBustamante [v: ${dd}/${mm}/${yyyy}]`;
+    document.title = `Pizarra JoBustamante [v: ${dd}/${mm}/${yyyy}]`;
   })();
 
   // ======================================================================
