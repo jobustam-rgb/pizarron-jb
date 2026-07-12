@@ -237,6 +237,12 @@
       opacity: 0.5;
       display: none;
     }
+    #canvasMarcador {
+      background: transparent;
+      z-index: 4;
+      pointer-events: none;
+      display: none;
+    }
     .barra-lateral {
       display: flex;
       flex-direction: column;
@@ -427,6 +433,9 @@
       <input type="file" id="inputAbrirCuaderno" accept=".job,.pizarra,.json,application/json" style="display:none;">
       <div class="separador-vertical"></div>
       <button class="btn-icon" id="btnPantallaCompleta" title="Modo pantalla completa"><i class="fas fa-expand"></i></button>
+      <div class="separador-vertical"></div>
+      <button class="btn-icon" id="btnAbrirPizarron2" title="Abrir Pizarrón 2 (vista para estudiantes)"><i class="fas fa-chalkboard-teacher"></i></button>
+      <button class="btn-icon" id="btnActualizarMarcador" title="Actualizar y mostrar/ocultar el marcador"><i class="fas fa-sync-alt"></i></button>
       <div class="separador-vertical" id="separadorInstalar" style="display:none;"></div>
       <button class="btn-icon" id="btnInstalarApp" title="Instalar como aplicación" style="display:none;"><i class="fas fa-download"></i></button>
     </div>
@@ -438,6 +447,7 @@
       <canvas id="canvasPrincipal" width="1200" height="700"></canvas>
       <canvas id="canvasTemporal" width="1200" height="700"></canvas>
       <canvas id="canvasGrid" width="1200" height="700"></canvas>
+      <canvas id="canvasMarcador" width="1200" height="700"></canvas>
     </div>
 
     <!-- LUPA (efecto de aumento circular) -->
@@ -573,14 +583,15 @@ const Pizarra = (() => {
   const canvasP = document.getElementById('canvasPrincipal');
   const canvasT = document.getElementById('canvasTemporal');
   const canvasGrid = document.getElementById('canvasGrid');
+  const canvasMarcador = document.getElementById('canvasMarcador');
   const ctxFondo = canvasFondo.getContext('2d');
   const ctxP = canvasP.getContext('2d');
   const ctxT = canvasT.getContext('2d');
   const ctxGrid = canvasGrid.getContext('2d');
 
   const W = 1200, H = 700;
-  canvasP.width = canvasT.width = canvasGrid.width = canvasFondo.width = W;
-  canvasP.height = canvasT.height = canvasGrid.height = canvasFondo.height = H;
+  canvasP.width = canvasT.width = canvasGrid.width = canvasFondo.width = canvasMarcador.width = W;
+  canvasP.height = canvasT.height = canvasGrid.height = canvasFondo.height = canvasMarcador.height = H;
 
   let zoom = 1;
   let panX = 0, panY = 0;
@@ -613,6 +624,7 @@ const Pizarra = (() => {
     }
     historyIndex = history.length - 1;
     actualizarBotonesHistorial();
+    if (onCambioContenido) onCambioContenido();
   }
 
   function restaurarEstado(index) {
@@ -625,6 +637,7 @@ const Pizarra = (() => {
       historyIndex = index;
       ctxT.clearRect(0, 0, W, H);
       actualizarBotonesHistorial();
+      if (onCambioContenido) onCambioContenido();
     };
     img.src = dataUrl;
   }
@@ -649,6 +662,7 @@ const Pizarra = (() => {
     history = [dataUrl];
     historyIndex = 0;
     actualizarBotonesHistorial();
+    if (onCambioContenido) onCambioContenido();
   }
 
   // ----- FIN HISTORIAL -----
@@ -669,7 +683,7 @@ const Pizarra = (() => {
   function getCanvas() { return capaActiva === 'principal' ? canvasP : canvasT; }
   function getColorBorrado() { return capaActiva === 'principal' ? fondoColor : '#ffffff'; }
 
-  function limpiarTemporal() { ctxT.clearRect(0, 0, W, H); }
+  function limpiarTemporal() { ctxT.clearRect(0, 0, W, H); if (onCambioContenido) onCambioContenido(); }
 
   // ---- FUNCIONES DE DIBUJO (SIN guardarEstado) ----
   function dibujarPunto(x, y, color, grosor, opacidad) {
@@ -760,10 +774,12 @@ const Pizarra = (() => {
     // del dibujo (canvasPrincipal). Por eso ya NO se llama a guardarEstado()
     // aquí: cambiar el color de fondo no altera ni cubre lo dibujado, y no
     // debe consumir un paso del historial de deshacer/rehacer del dibujo.
+    if (onCambioContenido) onCambioContenido();
   }
 
   function actualizarTransform() {
     viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    if (onCambioTransform) onCambioTransform();
   }
 
   function zoomIn() {
@@ -958,6 +974,9 @@ const Pizarra = (() => {
       guardarEstado();
     } else if (tool === 'lapiz' || tool === 'resaltador' || tool === 'goma') {
       guardarEstado();
+    } else if (tool === 'lapizTemporal') {
+      // No entra al historial (es efímero), pero sí debe reflejarse en el espejo
+      if (onCambioContenido) onCambioContenido();
     }
   }
 
@@ -995,6 +1014,32 @@ const Pizarra = (() => {
   function getCanvasFondo() { return canvasFondo; }
   function getCanvasGrid() { return canvasGrid; }
   function getContenedor() { return contenedor; }
+  function estaDibujando() { return isDrawing; }
+
+  // ======================================================================
+  // PUNTO DE CENTRO EN EL TABLERO (para el marcador espejo Pizarrón 1 ↔ 2)
+  // Devuelve, en coordenadas del tablero (0..W, 0..H), qué punto del
+  // dibujo está actualmente en el centro visual de la pantalla — es decir,
+  // invierte el pan/zoom aplicando la misma fórmula que getCoords().
+  // ======================================================================
+  function getPuntoDeCentroEnTablero() {
+    const rect = contenedor.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    let x = (cx - rect.left) * scaleX;
+    let y = (cy - rect.top) * scaleY;
+    x = (x - panX) / zoom;
+    y = (y - panY) / zoom;
+    return { x, y };
+  }
+
+  // ===== Hooks de sincronización (Pizarrón 1 → Pizarrón 2) =====
+  let onCambioContenido = null;
+  let onCambioTransform = null;
+  function setOnCambioContenido(fn) { onCambioContenido = fn; }
+  function setOnCambioTransform(fn) { onCambioTransform = fn; }
 
   return {
     setHerramienta,
@@ -1025,6 +1070,10 @@ const Pizarra = (() => {
     getCanvasFondo,
     getCanvasGrid,
     getContenedor,
+    estaDibujando,
+    getPuntoDeCentroEnTablero,
+    setOnCambioContenido,
+    setOnCambioTransform,
     actualizarBotonesHistorial,
     inicializarHistorial,
   };
@@ -1780,6 +1829,10 @@ class SelectionManagerCP {
   const iconosBarraSuperior = document.getElementById('iconosBarraSuperior');
   const separadorToggle = document.getElementById('separadorToggle');
   const btnPantallaCompleta = document.getElementById('btnPantallaCompleta');
+  const btnAbrirPizarron2 = document.getElementById('btnAbrirPizarron2');
+  const btnActualizarMarcador = document.getElementById('btnActualizarMarcador');
+  const canvasMarcador = document.getElementById('canvasMarcador');
+  const ctxMarcador = canvasMarcador.getContext('2d');
   const btnGuardarCuaderno = document.getElementById('btnGuardarCuaderno');
   const btnAbrirCuaderno = document.getElementById('btnAbrirCuaderno');
   const inputAbrirCuaderno = document.getElementById('inputAbrirCuaderno');
@@ -2350,10 +2403,12 @@ class SelectionManagerCP {
       img.onload = () => {
         ctxDeCarga.drawImage(img, 0, 0);
         Pizarra.inicializarHistorial();
+        if (typeof emitirContenidoCompleto === 'function') emitirContenidoCompleto();
       };
       img.src = pagina.dibujo;
     } else {
       Pizarra.inicializarHistorial();
+      if (typeof emitirContenidoCompleto === 'function') emitirContenidoCompleto();
     }
 
     RenderizarPestanas();
@@ -2664,6 +2719,119 @@ class SelectionManagerCP {
   window.addEventListener('touchmove', lupaPointerMove, { passive: false });
   window.addEventListener('mouseup', lupaPointerUp);
   window.addEventListener('touchend', lupaPointerUp);
+
+  // ======================================================================
+  // MÓDULO: PizarronEspejo
+  // Sincroniza el contenido y un marcador de posición con una segunda
+  // pestaña ("Pizarrón 2"), pensada para mostrar a los estudiantes una
+  // vista limpia mientras el profesor trabaja cómodamente en el Pizarrón 1.
+  // ======================================================================
+  const CM_A_PX = 37.795; // aproximación estándar 96dpi (1cm ≈ 37.795 px)
+  const MARCADOR_ANCHO_TABLERO = 3 * CM_A_PX;   // 3cm de largo (horizontal)
+  const MARCADOR_ALTO_TABLERO = 1.5 * CM_A_PX;  // 1.5cm de ancho (vertical)
+
+  const CANAL_SYNC = 'pizarron-jb-sync';
+  const CLAVE_CONTENIDO = 'pizarron_jb_sync_contenido';
+  const CLAVE_MARCADOR = 'pizarron_jb_sync_marcador';
+
+  const canalSync = ('BroadcastChannel' in window) ? new BroadcastChannel(CANAL_SYNC) : null;
+  let marcadorVisible = false;
+
+  // Compone fondo + dibujo + lápiz temporal en una sola imagen plana,
+  // igual que se hace para imprimir: así el Pizarrón 2 solo necesita
+  // mostrar una <img>, sin tener que recomponer capas.
+  function generarImagenPlanaActual(callback) {
+    const canvasExport = document.createElement('canvas');
+    canvasExport.width = Pizarra.W;
+    canvasExport.height = Pizarra.H;
+    const ctxExport = canvasExport.getContext('2d');
+    ctxExport.fillStyle = Pizarra.getColorFondo() || '#ffffff';
+    ctxExport.fillRect(0, 0, Pizarra.W, Pizarra.H);
+    ctxExport.drawImage(Pizarra.getCanvasPrincipal(), 0, 0);
+    ctxExport.drawImage(Pizarra.getCanvasTemporal(), 0, 0);
+    callback(canvasExport.toDataURL('image/png'));
+  }
+
+  function emitirContenidoCompleto() {
+    generarImagenPlanaActual((imagen) => {
+      const datos = { tipo: 'contenido', imagen, ts: Date.now() };
+      if (canalSync) canalSync.postMessage(datos);
+      try { localStorage.setItem(CLAVE_CONTENIDO, JSON.stringify(datos)); } catch (e) { /* almacenamiento no disponible */ }
+    });
+  }
+
+  function emitirMarcadorCompleto() {
+    const centro = Pizarra.getPuntoDeCentroEnTablero();
+    const datos = {
+      tipo: 'marcador',
+      x: centro.x, y: centro.y,
+      ancho: MARCADOR_ANCHO_TABLERO, alto: MARCADOR_ALTO_TABLERO,
+      visible: marcadorVisible,
+      ts: Date.now()
+    };
+    if (canalSync) canalSync.postMessage(datos);
+    try { localStorage.setItem(CLAVE_MARCADOR, JSON.stringify(datos)); } catch (e) { /* almacenamiento no disponible */ }
+  }
+
+  // Dibuja (o esconde) el marcador también en el propio Pizarrón 1
+  function dibujarMarcadorLocal() {
+    ctxMarcador.clearRect(0, 0, Pizarra.W, Pizarra.H);
+    if (!marcadorVisible) {
+      canvasMarcador.style.display = 'none';
+      return;
+    }
+    canvasMarcador.style.display = 'block';
+    const centro = Pizarra.getPuntoDeCentroEnTablero();
+    const x = centro.x - MARCADOR_ANCHO_TABLERO / 2;
+    const y = centro.y - MARCADOR_ALTO_TABLERO / 2;
+    ctxMarcador.save();
+    ctxMarcador.fillStyle = 'rgba(37, 99, 235, 0.14)';
+    ctxMarcador.strokeStyle = 'rgba(37, 99, 235, 0.55)';
+    ctxMarcador.lineWidth = 2;
+    const r = 10;
+    ctxMarcador.beginPath();
+    ctxMarcador.roundRect(x, y, MARCADOR_ANCHO_TABLERO, MARCADOR_ALTO_TABLERO, r);
+    ctxMarcador.fill();
+    ctxMarcador.stroke();
+    ctxMarcador.restore();
+  }
+
+  // ===== Conectar los hooks del módulo Pizarra =====
+  Pizarra.setOnCambioContenido(() => emitirContenidoCompleto());
+  Pizarra.setOnCambioTransform(() => {
+    if (!marcadorVisible) return;
+    dibujarMarcadorLocal();
+    emitirMarcadorCompleto();
+  });
+
+  // Mientras se está trazando (pincel, resaltador, lápiz temporal, formas...)
+  // se transmite periódicamente, para que el Pizarrón 2 vea el trazo
+  // avanzar casi en vivo, no solo el resultado final al soltar el clic.
+  setInterval(() => {
+    if (Pizarra.estaDibujando()) emitirContenidoCompleto();
+  }, 150);
+
+  // ===== Botón: Abrir Pizarrón 2 en otra pestaña =====
+  function ProcesoAbrirPizarron2() {
+    window.open('pizarron2.html', '_blank');
+    // Pequeño respiro y luego reenviar el estado completo, para que la
+    // pestaña recién abierta reciba contenido aunque llegue tarde al canal.
+    setTimeout(() => {
+      emitirContenidoCompleto();
+      emitirMarcadorCompleto();
+    }, 800);
+  }
+  bindButton(btnAbrirPizarron2, () => ProcesoAbrirPizarron2());
+
+  // ===== Botón: Actualizar (fuerza reenvío) + mostrar/ocultar marcador =====
+  function ProcesoActualizarYMarcador() {
+    marcadorVisible = !marcadorVisible;
+    btnActualizarMarcador.classList.toggle('activo', marcadorVisible);
+    dibujarMarcadorLocal();
+    emitirContenidoCompleto();
+    emitirMarcadorCompleto();
+  }
+  bindButton(btnActualizarMarcador, () => ProcesoActualizarYMarcador());
 
   // ===== Inicialización =====
   Pizarra.setHerramienta('lapiz', 'principal');
