@@ -436,6 +436,11 @@
       <div class="separador-vertical"></div>
       <button class="btn-icon" id="btnAbrirPizarron2" title="Abrir Pizarrón 2 (vista para estudiantes)"><i class="fas fa-chalkboard-teacher"></i></button>
       <button class="btn-icon" id="btnActualizarMarcador" title="Actualizar y mostrar/ocultar el marcador"><i class="fas fa-sync-alt"></i></button>
+      <div class="separador-vertical"></div>
+      <button class="btn-icon" id="btnMoverIzquierda" title="Mover la vista a la izquierda"><i class="fas fa-arrow-left"></i></button>
+      <button class="btn-icon" id="btnMoverDerecha" title="Mover la vista a la derecha"><i class="fas fa-arrow-right"></i></button>
+      <button class="btn-icon" id="btnMoverArriba" title="Mover la vista hacia arriba"><i class="fas fa-arrow-up"></i></button>
+      <button class="btn-icon" id="btnMoverAbajo" title="Mover la vista hacia abajo"><i class="fas fa-arrow-down"></i></button>
       <div class="separador-vertical" id="separadorInstalar" style="display:none;"></div>
       <button class="btn-icon" id="btnInstalarApp" title="Instalar como aplicación" style="display:none;"><i class="fas fa-download"></i></button>
     </div>
@@ -479,6 +484,7 @@
           <button class="btn-icon" id="btnMover" data-herramienta="mover"><i class="fas fa-arrows-alt"></i></button>
           <button class="btn-icon" id="btnZoomIn"><i class="fas fa-plus-circle"></i></button>
           <button class="btn-icon" id="btnZoomOut"><i class="fas fa-minus-circle"></i></button>
+          <button class="btn-icon" id="btnRestablecerVista" title="Restablecer vista al tamaño inicial"><i class="fas fa-compress-arrows-alt"></i></button>
           <button class="btn-icon" id="btnLupa" data-herramienta="lupa" title="Lupa (radio 2cm)"><i class="fas fa-search-plus"></i></button>
         </div>
       </div>
@@ -783,11 +789,11 @@ const Pizarra = (() => {
   }
 
   function zoomIn() {
-    zoom = Math.min(3, zoom + 0.1);
+    zoom = Math.min(8, zoom * 1.15);
     actualizarTransform();
   }
   function zoomOut() {
-    zoom = Math.max(0.3, zoom - 0.1);
+    zoom = Math.max(0.25, zoom / 1.15);
     actualizarTransform();
   }
 
@@ -1008,6 +1014,17 @@ const Pizarra = (() => {
   function setResaltadorGrosor(grosor) { resaltadorGrosor = grosor; }
 
   function getTransform() { return { panX, panY, zoom }; }
+  function moverVista(dx, dy) {
+    panX += dx;
+    panY += dy;
+    actualizarTransform();
+  }
+  function setTransformCompleta(nuevoZoom, nuevoPanX, nuevoPanY) {
+    zoom = nuevoZoom;
+    panX = nuevoPanX;
+    panY = nuevoPanY;
+    actualizarTransform();
+  }
   function getColorFondo() { return fondoColor; }
   function getCanvasPrincipal() { return canvasP; }
   function getCanvasTemporal() { return canvasT; }
@@ -1064,6 +1081,8 @@ const Pizarra = (() => {
     W,
     H,
     getTransform,
+    moverVista,
+    setTransformCompleta,
     getColorFondo,
     getCanvasPrincipal,
     getCanvasTemporal,
@@ -1816,6 +1835,7 @@ class SelectionManagerCP {
   const btnMover = document.getElementById('btnMover');
   const btnZoomIn = document.getElementById('btnZoomIn');
   const btnZoomOut = document.getElementById('btnZoomOut');
+  const btnRestablecerVista = document.getElementById('btnRestablecerVista');
   const btnLupa = document.getElementById('btnLupa');
   const lupaOverlay = document.getElementById('lupaOverlay');
   const lupaCanvas = document.getElementById('lupaCanvas');
@@ -1831,6 +1851,10 @@ class SelectionManagerCP {
   const btnPantallaCompleta = document.getElementById('btnPantallaCompleta');
   const btnAbrirPizarron2 = document.getElementById('btnAbrirPizarron2');
   const btnActualizarMarcador = document.getElementById('btnActualizarMarcador');
+  const btnMoverIzquierda = document.getElementById('btnMoverIzquierda');
+  const btnMoverDerecha = document.getElementById('btnMoverDerecha');
+  const btnMoverArriba = document.getElementById('btnMoverArriba');
+  const btnMoverAbajo = document.getElementById('btnMoverAbajo');
   const canvasMarcador = document.getElementById('canvasMarcador');
   const ctxMarcador = canvasMarcador.getContext('2d');
   const btnGuardarCuaderno = document.getElementById('btnGuardarCuaderno');
@@ -2080,6 +2104,31 @@ class SelectionManagerCP {
   bindButton(btnMover, () => { if (btnMover.classList.contains('activo')) setTool('lapiz', btnLapiz); else setTool('mover', btnMover); });
   bindButton(btnZoomIn, () => Pizarra.zoomIn());
   bindButton(btnZoomOut, () => Pizarra.zoomOut());
+
+  // ======================================================================
+  // PROCESO: ProcesoRestablecerVista
+  // Primer clic: guarda la vista actual (zoom + posición) y la restablece
+  // al tamaño/ubicación inicial (zoom 1, sin desplazamiento — la misma
+  // vista "de fábrica" con la que arranca el Pizarrón 2).
+  // Segundo clic: restaura la vista que tenías justo antes de resetear.
+  // ======================================================================
+  let vistaGuardadaAntesDeReset = null;
+
+  function ProcesoRestablecerVista() {
+    if (vistaGuardadaAntesDeReset === null) {
+      vistaGuardadaAntesDeReset = Pizarra.getTransform();
+      Pizarra.setTransformCompleta(1, 0, 0);
+      btnRestablecerVista.classList.add('activo');
+      btnRestablecerVista.title = 'Volver a la vista anterior';
+    } else {
+      const v = vistaGuardadaAntesDeReset;
+      Pizarra.setTransformCompleta(v.zoom, v.panX, v.panY);
+      vistaGuardadaAntesDeReset = null;
+      btnRestablecerVista.classList.remove('activo');
+      btnRestablecerVista.title = 'Restablecer vista al tamaño inicial';
+    }
+  }
+  bindButton(btnRestablecerVista, () => ProcesoRestablecerVista());
   bindButton(btnDeshacer, () => { Pizarra.deshacer(); Pizarra.actualizarBotonesHistorial(); });
   bindButton(btnRehacer, () => { Pizarra.rehacer(); Pizarra.actualizarBotonesHistorial(); });
   bindButton(btnCP, () => setTool('cp', btnCP));
@@ -2288,7 +2337,7 @@ class SelectionManagerCP {
           <div class="hoja" style="${esUltima ? '' : 'page-break-after: always;'}">
             <div class="encabezado">
               <h1>Pizarra Digital — ${pagina.nombre}</h1>
-              <span>${fecha} · Página ${index + 1} de ${totalPaginas}</span>
+              <span>${fecha} · Pág. ${index + 1} de ${totalPaginas}</span>
             </div>
             <img class="imagen-pizarra" src="${imagenDataUrl}" alt="Contenido de ${pagina.nombre}">
             <div class="pie">Mat. Edgar Johni Bustamante Romero, Ph.D.</div>
@@ -2363,7 +2412,7 @@ class SelectionManagerCP {
   function crearPaginaVacia(nombre) {
     contadorPaginas++;
     return {
-      nombre: nombre || ('Página ' + contadorPaginas),
+      nombre: nombre || ('Pág. ' + contadorPaginas),
       fondo: '#d9e8f5',
       dibujo: null // dataURL PNG del contenido; null = página en blanco
     };
@@ -2499,7 +2548,7 @@ class SelectionManagerCP {
           return;
         }
         paginas = datos.paginas.map((p, i) => ({
-          nombre: p.nombre || ('Página ' + (i + 1)),
+          nombre: p.nombre || ('Pág. ' + (i + 1)),
           fondo: p.fondo || '#ffffff',
           dibujo: p.dibujo || null
         }));
@@ -2727,7 +2776,7 @@ class SelectionManagerCP {
   // vista limpia mientras el profesor trabaja cómodamente en el Pizarrón 1.
   // ======================================================================
   const CM_A_PX = 37.795; // aproximación estándar 96dpi (1cm ≈ 37.795 px)
-  const MARCADOR_ANCHO_TABLERO = 3 * CM_A_PX;   // 3cm de largo (horizontal)
+  const MARCADOR_ANCHO_TABLERO = 6 * CM_A_PX;   // 6cm de largo (horizontal) — duplicado
   const MARCADOR_ALTO_TABLERO = 1.5 * CM_A_PX;  // 1.5cm de ancho (vertical)
 
   const CANAL_SYNC = 'pizarron-jb-sync';
@@ -2754,7 +2803,13 @@ class SelectionManagerCP {
 
   function emitirContenidoCompleto() {
     generarImagenPlanaActual((imagen) => {
-      const datos = { tipo: 'contenido', imagen, ts: Date.now() };
+      const datos = {
+        tipo: 'contenido',
+        imagen,
+        ts: Date.now(),
+        paginaNumero: paginaActivaIndex + 1,
+        totalPaginas: paginas.length
+      };
       if (canalSync) canalSync.postMessage(datos);
       try { localStorage.setItem(CLAVE_CONTENIDO, JSON.stringify(datos)); } catch (e) { /* almacenamiento no disponible */ }
     });
@@ -2833,6 +2888,22 @@ class SelectionManagerCP {
   }
   bindButton(btnActualizarMarcador, () => ProcesoActualizarYMarcador());
 
+  // ======================================================================
+  // PROCESO: ProcesoMoverVista
+  // Desplaza la vista del tablero por pasos exactos, usando el tamaño del
+  // rectángulo marcador como referencia (y escalando con el zoom actual,
+  // para que el paso se sienta igual de "grande" a cualquier nivel de zoom).
+  // Horizontal: un largo completo del rectángulo. Vertical: dos anchos.
+  // ======================================================================
+  function ProcesoMoverVista(dx, dy) {
+    const { zoom } = Pizarra.getTransform();
+    Pizarra.moverVista(dx * zoom, dy * zoom);
+  }
+  bindButton(btnMoverIzquierda, () => ProcesoMoverVista(-MARCADOR_ANCHO_TABLERO, 0));
+  bindButton(btnMoverDerecha, () => ProcesoMoverVista(MARCADOR_ANCHO_TABLERO, 0));
+  bindButton(btnMoverArriba, () => ProcesoMoverVista(0, -MARCADOR_ALTO_TABLERO * 2));
+  bindButton(btnMoverAbajo, () => ProcesoMoverVista(0, MARCADOR_ALTO_TABLERO * 2));
+
   // ===== Inicialización =====
   Pizarra.setHerramienta('lapiz', 'principal');
   Pizarra.setColor('#1a1a1a');
@@ -2849,7 +2920,7 @@ class SelectionManagerCP {
   selectorCP.actualizarBotonCopiar();
 
   // El cuaderno arranca con una sola página en blanco (la que ya está dibujada)
-  paginas = [crearPaginaVacia('Página 1')];
+  paginas = [crearPaginaVacia('Pág. 1')];
   paginaActivaIndex = 0;
   RenderizarPestanas();
 
