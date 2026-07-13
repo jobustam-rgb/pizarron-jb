@@ -243,6 +243,11 @@
       pointer-events: none;
       display: none;
     }
+    .fila-pizarron {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
     .barra-lateral {
       display: flex;
       flex-direction: column;
@@ -253,14 +258,10 @@
       border-radius: 28px;
       padding: 10px 8px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-      position: absolute;
-      left: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 10;
       border: 1px solid rgba(255,255,255,0.5);
       touch-action: none;
       width: 48px;
+      flex-shrink: 0;
     }
     .barra-lateral .btn-icon {
       width: 34px;
@@ -412,6 +413,41 @@
 </head>
 <body>
 <div class="pizarra-wrapper">
+
+  <div class="fila-pizarron">
+  <!-- BARRA LATERAL: fuera del recuadro del pizarrón, pero a su lado -->
+  <div class="barra-lateral" id="barraLateral">
+    <!-- GRUPO 1: Dibujo -->
+    <div class="grupo-herramientas" id="grupo1">
+      <button class="toggle-grupo" id="toggleGrupo1"><i class="fas fa-chevron-down"></i> <i class="fas fa-paint-brush" style="font-size:12px;"></i></button>
+      <div class="iconos-grupo">
+        <button class="btn-icon activo" id="btnLapiz" data-herramienta="lapiz"><i class="fas fa-pencil-alt"></i></button>
+        <button class="btn-icon" id="btnResaltador" data-herramienta="resaltador"><i class="fas fa-highlighter"></i></button>
+        <button class="btn-icon" id="btnGoma" data-herramienta="goma"><i class="fas fa-eraser"></i></button>
+        <button class="btn-icon" id="btnLinea" data-herramienta="linea"><i class="fas fa-minus"></i></button>
+        <button class="btn-icon" id="btnRectangulo" data-herramienta="rectangulo"><i class="fas fa-border-all"></i></button>
+        <button class="btn-icon" id="btnSeleccion" data-herramienta="seleccionar"><i class="fas fa-hand-pointer"></i></button>
+      </div>
+    </div>
+    <div class="separador"></div>
+    <!-- GRUPO 2: Configuración -->
+    <div class="grupo-herramientas" id="grupo2">
+      <button class="toggle-grupo" id="toggleGrupo2"><i class="fas fa-chevron-down"></i> <i class="fas fa-cog" style="font-size:12px;"></i></button>
+      <div class="iconos-grupo">
+        <button class="btn-icon" id="btnFondo" data-herramienta="fondo"><i class="fas fa-palette"></i></button>
+        <button class="btn-icon" id="btnGrid" data-herramienta="grid"><i class="fas fa-th"></i></button>
+        <button class="btn-icon" id="btnMover" data-herramienta="mover"><i class="fas fa-arrows-alt"></i></button>
+        <button class="btn-icon" id="btnZoomIn"><i class="fas fa-plus-circle"></i></button>
+        <button class="btn-icon" id="btnZoomOut"><i class="fas fa-minus-circle"></i></button>
+        <button class="btn-icon" id="btnRestablecerVista" title="Restablecer vista al tamaño inicial"><i class="fas fa-compress-arrows-alt"></i></button>
+        <button class="btn-icon" id="btnLupa" data-herramienta="lupa" title="Lupa (radio 2cm)"><i class="fas fa-search-plus"></i></button>
+      </div>
+    </div>
+
+    <!-- Botones fijos: siempre visibles, fuera de los grupos retráctiles -->
+    <div class="separador"></div>
+    <button class="btn-icon" id="btnNeutro" data-herramienta="neutro" title="Modo neutro (no dibuja nada)"><i class="far fa-circle"></i></button>
+  </div>
   <!-- BARRA SUPERIOR -->
   <div class="barra-superior" id="barraSuperior">
     <button class="btn-icon" id="btnToggleBarraSuperior" title="Contraer / expandir menú"><i class="fas fa-chevron-left"></i></button>
@@ -458,40 +494,6 @@
     <!-- LUPA (efecto de aumento circular) -->
     <div class="lupa-overlay" id="lupaOverlay">
       <canvas id="lupaCanvas"></canvas>
-    </div>
-
-    <!-- BARRA LATERAL -->
-    <div class="barra-lateral" id="barraLateral">
-      <!-- GRUPO 1: Dibujo -->
-      <div class="grupo-herramientas" id="grupo1">
-        <button class="toggle-grupo" id="toggleGrupo1"><i class="fas fa-chevron-down"></i> <i class="fas fa-paint-brush" style="font-size:12px;"></i></button>
-        <div class="iconos-grupo">
-          <button class="btn-icon activo" id="btnLapiz" data-herramienta="lapiz"><i class="fas fa-pencil-alt"></i></button>
-          <button class="btn-icon" id="btnResaltador" data-herramienta="resaltador"><i class="fas fa-highlighter"></i></button>
-          <button class="btn-icon" id="btnGoma" data-herramienta="goma"><i class="fas fa-eraser"></i></button>
-          <button class="btn-icon" id="btnLinea" data-herramienta="linea"><i class="fas fa-minus"></i></button>
-          <button class="btn-icon" id="btnRectangulo" data-herramienta="rectangulo"><i class="fas fa-border-all"></i></button>
-          <button class="btn-icon" id="btnSeleccion" data-herramienta="seleccionar"><i class="fas fa-hand-pointer"></i></button>
-        </div>
-      </div>
-      <div class="separador"></div>
-      <!-- GRUPO 2: Configuración -->
-      <div class="grupo-herramientas" id="grupo2">
-        <button class="toggle-grupo" id="toggleGrupo2"><i class="fas fa-chevron-down"></i> <i class="fas fa-cog" style="font-size:12px;"></i></button>
-        <div class="iconos-grupo">
-          <button class="btn-icon" id="btnFondo" data-herramienta="fondo"><i class="fas fa-palette"></i></button>
-          <button class="btn-icon" id="btnGrid" data-herramienta="grid"><i class="fas fa-th"></i></button>
-          <button class="btn-icon" id="btnMover" data-herramienta="mover"><i class="fas fa-arrows-alt"></i></button>
-          <button class="btn-icon" id="btnZoomIn"><i class="fas fa-plus-circle"></i></button>
-          <button class="btn-icon" id="btnZoomOut"><i class="fas fa-minus-circle"></i></button>
-          <button class="btn-icon" id="btnRestablecerVista" title="Restablecer vista al tamaño inicial"><i class="fas fa-compress-arrows-alt"></i></button>
-          <button class="btn-icon" id="btnLupa" data-herramienta="lupa" title="Lupa (radio 2cm)"><i class="fas fa-search-plus"></i></button>
-        </div>
-      </div>
-
-      <!-- Botones fijos: siempre visibles, fuera de los grupos retráctiles -->
-      <div class="separador"></div>
-      <button class="btn-icon" id="btnNeutro" data-herramienta="neutro" title="Modo neutro (no dibuja nada)"><i class="far fa-circle"></i></button>
     </div>
 
     <!-- PANELES FLOTANTES -->
@@ -570,6 +572,7 @@
     </div>
 
     <div class="firma">Mat. Edgar Johni Bustamante Romero, Ph.D.</div>
+  </div>
   </div>
 
   <!-- BARRA DE PESTAÑAS (Cuaderno multi-página) -->
@@ -2893,16 +2896,16 @@ class SelectionManagerCP {
   // Desplaza la vista del tablero por pasos exactos, usando el tamaño del
   // rectángulo marcador como referencia (y escalando con el zoom actual,
   // para que el paso se sienta igual de "grande" a cualquier nivel de zoom).
-  // Horizontal: un largo completo del rectángulo. Vertical: dos anchos.
+  // Horizontal: 3/4 del largo del rectángulo. Vertical: un ancho completo.
   // ======================================================================
   function ProcesoMoverVista(dx, dy) {
     const { zoom } = Pizarra.getTransform();
     Pizarra.moverVista(dx * zoom, dy * zoom);
   }
-  bindButton(btnMoverIzquierda, () => ProcesoMoverVista(-MARCADOR_ANCHO_TABLERO, 0));
-  bindButton(btnMoverDerecha, () => ProcesoMoverVista(MARCADOR_ANCHO_TABLERO, 0));
-  bindButton(btnMoverArriba, () => ProcesoMoverVista(0, -MARCADOR_ALTO_TABLERO * 2));
-  bindButton(btnMoverAbajo, () => ProcesoMoverVista(0, MARCADOR_ALTO_TABLERO * 2));
+  bindButton(btnMoverIzquierda, () => ProcesoMoverVista(MARCADOR_ANCHO_TABLERO * 0.75, 0));
+  bindButton(btnMoverDerecha, () => ProcesoMoverVista(-MARCADOR_ANCHO_TABLERO * 0.75, 0));
+  bindButton(btnMoverArriba, () => ProcesoMoverVista(0, MARCADOR_ALTO_TABLERO));
+  bindButton(btnMoverAbajo, () => ProcesoMoverVista(0, -MARCADOR_ALTO_TABLERO));
 
   // ===== Inicialización =====
   Pizarra.setHerramienta('lapiz', 'principal');
