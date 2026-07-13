@@ -2789,10 +2789,63 @@ class SelectionManagerCP {
   const canalSync = ('BroadcastChannel' in window) ? new BroadcastChannel(CANAL_SYNC) : null;
   let marcadorVisible = false;
 
+  // ======================================================================
+  // Detección automática de si el Pizarrón 2 sigue abierto ("latido").
+  // Mientras no haya un Pizarrón 2 activo, NO se hace ningún trabajo de
+  // sincronización (ni componer imagen, ni tocar localStorage, ni
+  // transmitir) — así se evita cualquier costo en equipos más modestos
+  // (p. ej. pantallas táctiles de aula) cuando nadie está mirando la
+  // segunda pantalla.
+  // ======================================================================
+  const UMBRAL_INACTIVIDAD_P2 = 12000; // ms sin señal del Pizarrón 2 = se da por cerrado
+  let pizarron2Activo = false;
+  let ultimaSenalP2 = 0;
+
+  function marcarPizarron2Activo() {
+    ultimaSenalP2 = Date.now();
+    if (!pizarron2Activo) {
+      pizarron2Activo = true;
+      // Recién detectado (o recién reconectado): manda el estado completo
+      // de inmediato, sin esperar al próximo trazo.
+      emitirContenidoCompleto(false);
+      if (marcadorVisible) emitirMarcadorCompleto();
+    }
+  }
+  function marcarPizarron2Inactivo() {
+    pizarron2Activo = false;
+  }
+  function forzarPizarron2Activo() {
+    // Usado por acciones explícitas del profesor (abrir / actualizar),
+    // para que funcionen de inmediato sin esperar el próximo latido.
+    pizarron2Activo = true;
+    ultimaSenalP2 = Date.now();
+  }
+
+  if (canalSync) {
+    canalSync.onmessage = (ev) => {
+      const datos = ev.data;
+      if (!datos) return;
+      if (datos.tipo === 'conectado' || datos.tipo === 'ping') marcarPizarron2Activo();
+      else if (datos.tipo === 'desconectado') marcarPizarron2Inactivo();
+    };
+  }
+
+  // Vigilante: si no llega señal del Pizarrón 2 en un buen rato, se asume
+  // cerrado (cubre el caso de que la pestaña se haya cerrado de golpe,
+  // sin avisar).
+  setInterval(() => {
+    if (pizarron2Activo && (Date.now() - ultimaSenalP2 > UMBRAL_INACTIVIDAD_P2)) {
+      marcarPizarron2Inactivo();
+    }
+  }, 4000);
+
   // Compone fondo + dibujo + lápiz temporal en una sola imagen plana,
   // igual que se hace para imprimir: así el Pizarrón 2 solo necesita
   // mostrar una <img>, sin tener que recomponer capas.
-  function generarImagenPlanaActual(callback) {
+  // modoRapido=true → JPEG de calidad media (rápido, para actualizaciones
+  // en vivo mientras se traza). modoRapido=false → PNG (calidad completa,
+  // para el resultado final de cada trazo).
+  function generarImagenPlanaActual(modoRapido, callback) {
     const canvasExport = document.createElement('canvas');
     canvasExport.width = Pizarra.W;
     canvasExport.height = Pizarra.H;
@@ -2801,24 +2854,36 @@ class SelectionManagerCP {
     ctxExport.fillRect(0, 0, Pizarra.W, Pizarra.H);
     ctxExport.drawImage(Pizarra.getCanvasPrincipal(), 0, 0);
     ctxExport.drawImage(Pizarra.getCanvasTemporal(), 0, 0);
-    callback(canvasExport.toDataURL('image/png'));
+    callback(modoRapido ? canvasExport.toDataURL('image/jpeg', 0.6) : canvasExport.toDataURL('image/png'));
   }
 
-  function emitirContenidoCompleto() {
-    generarImagenPlanaActual((imagen) => {
-      const datos = {
-        tipo: 'contenido',
-        imagen,
-        ts: Date.now(),
-        paginaNumero: paginaActivaIndex + 1,
-        totalPaginas: paginas.length
-      };
-      if (canalSync) canalSync.postMessage(datos);
-      try { localStorage.setItem(CLAVE_CONTENIDO, JSON.stringify(datos)); } catch (e) { /* almacenamiento no disponible */ }
-    });
+  function emitirContenidoCompleto(modoRapido) {
+    if (!pizarron2Activo) return; // nadie mirando: no se hace ningún trabajo
+    // setTimeout(...,0): cede el turno al navegador para que primero
+    // termine de pintar el trazo en curso, y recién después componga/
+    // codifique la imagen — evita que esto se sienta en el trazo.
+    setTimeout(() => {
+      if (!pizarron2Activo) return; // pudo desconectarse durante la espera
+      generarImagenPlanaActual(modoRapido, (imagen) => {
+        const datos = {
+          tipo: 'contenido',
+          imagen,
+          ts: Date.now(),
+          paginaNumero: paginaActivaIndex + 1,
+          totalPaginas: paginas.length
+        };
+        if (canalSync) canalSync.postMessage(datos);
+        // El localStorage (síncrono y más costoso) solo se usa para la
+        // versión final de calidad completa, no en cada actualización viva.
+        if (!modoRapido) {
+          try { localStorage.setItem(CLAVE_CONTENIDO, JSON.stringify(datos)); } catch (e) { /* almacenamiento no disponible */ }
+        }
+      });
+    }, 0);
   }
 
   function emitirMarcadorCompleto() {
+    if (!pizarron2Activo) return; // nadie mirando: no se hace ningún trabajo
     const centro = Pizarra.getPuntoDeCentroEnTablero();
     const datos = {
       tipo: 'marcador',
@@ -2855,7 +2920,7 @@ class SelectionManagerCP {
   }
 
   // ===== Conectar los hooks del módulo Pizarra =====
-  Pizarra.setOnCambioContenido(() => emitirContenidoCompleto());
+  Pizarra.setOnCambioContenido(() => emitirContenidoCompleto(false));
   Pizarra.setOnCambioTransform(() => {
     if (!marcadorVisible) return;
     dibujarMarcadorLocal();
@@ -2863,19 +2928,21 @@ class SelectionManagerCP {
   });
 
   // Mientras se está trazando (pincel, resaltador, lápiz temporal, formas...)
-  // se transmite periódicamente, para que el Pizarrón 2 vea el trazo
-  // avanzar casi en vivo, no solo el resultado final al soltar el clic.
+  // se transmite periódicamente en modo rápido (JPEG, sin localStorage),
+  // para que el Pizarrón 2 vea el trazo avanzar casi en vivo. Si no hay
+  // Pizarrón 2 activo, emitirContenidoCompleto no hace absolutamente nada.
   setInterval(() => {
-    if (Pizarra.estaDibujando()) emitirContenidoCompleto();
+    if (Pizarra.estaDibujando()) emitirContenidoCompleto(true);
   }, 150);
 
   // ===== Botón: Abrir Pizarrón 2 en otra pestaña =====
   function ProcesoAbrirPizarron2() {
     window.open('pizarron2.html', '_blank');
+    forzarPizarron2Activo();
     // Pequeño respiro y luego reenviar el estado completo, para que la
     // pestaña recién abierta reciba contenido aunque llegue tarde al canal.
     setTimeout(() => {
-      emitirContenidoCompleto();
+      emitirContenidoCompleto(false);
       emitirMarcadorCompleto();
     }, 800);
   }
@@ -2885,8 +2952,9 @@ class SelectionManagerCP {
   function ProcesoActualizarYMarcador() {
     marcadorVisible = !marcadorVisible;
     btnActualizarMarcador.classList.toggle('activo', marcadorVisible);
+    forzarPizarron2Activo();
     dibujarMarcadorLocal();
-    emitirContenidoCompleto();
+    emitirContenidoCompleto(false);
     emitirMarcadorCompleto();
   }
   bindButton(btnActualizarMarcador, () => ProcesoActualizarYMarcador());
