@@ -177,7 +177,7 @@
 
       <div class="indicador-estado inactivo" id="indicadorEstado" title="Esperando la primera actualización">
         <span class="punto"></span>
-        <span>Pizarrón 2</span>
+        <span>Pizarrón 2<span id="etiquetaPagina"></span></span>
       </div>
 
       <div class="controles-espejo">
@@ -195,7 +195,7 @@
   // ===== Constantes compartidas con el Pizarrón 1 (deben coincidir exactamente) =====
   const W = 1200, H = 700;
   const CM_A_PX = 37.795;
-  const MARCADOR_ANCHO_TABLERO = 3 * CM_A_PX;
+  const MARCADOR_ANCHO_TABLERO = 6 * CM_A_PX;
   const MARCADOR_ALTO_TABLERO = 1.5 * CM_A_PX;
   const CANAL_SYNC = 'pizarron-jb-sync';
   const CLAVE_CONTENIDO = 'pizarron_jb_sync_contenido';
@@ -221,8 +221,8 @@
   function actualizarTransform() {
     viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
   }
-  function zoomIn() { zoom = Math.min(3, zoom + 0.1); actualizarTransform(); }
-  function zoomOut() { zoom = Math.max(0.3, zoom - 0.1); actualizarTransform(); }
+  function zoomIn() { zoom = Math.min(8, zoom * 1.15); actualizarTransform(); }
+  function zoomOut() { zoom = Math.max(0.25, zoom / 1.15); actualizarTransform(); }
   btnZoomInEspejo.addEventListener('click', zoomIn);
   btnZoomOutEspejo.addEventListener('click', zoomOut);
 
@@ -284,10 +284,15 @@
     }, 8000);
   }
 
+  const etiquetaPagina = document.getElementById('etiquetaPagina');
+
   function aplicarContenido(datos) {
     if (!datos || !datos.imagen) return;
     if ((datos.ts || 0) < ultimoTs) return; // ignora datos desordenados/viejos
     ultimoTs = datos.ts || ultimoTs;
+    if (datos.paginaNumero) {
+      etiquetaPagina.textContent = ` · Pág. ${datos.paginaNumero}${datos.totalPaginas ? ' de ' + datos.totalPaginas : ''}`;
+    }
     const img = new Image();
     img.onload = () => {
       ctxContenido.clearRect(0, 0, W, H);
