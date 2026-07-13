@@ -377,6 +377,23 @@
   } catch (e) { /* sin datos previos */ }
 
   // ======================================================================
+  // "Latido": le avisa al Pizarrón 1 que esta pantalla sigue abierta, para
+  // que allá se sincronice solo mientras de verdad hace falta (ahorra
+  // recursos en el Pizarrón 1, especialmente en equipos más modestos).
+  // ======================================================================
+  function enviarSenal(tipo) {
+    const mensaje = { tipo };
+    if (canalSync) canalSync.postMessage(mensaje);
+  }
+  enviarSenal('conectado');
+  setInterval(() => enviarSenal('ping'), 4000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') enviarSenal('ping');
+  });
+  window.addEventListener('pagehide', () => enviarSenal('desconectado'));
+  window.addEventListener('beforeunload', () => enviarSenal('desconectado'));
+
+  // ======================================================================
   // Ajuste de pantalla: igual que en el Pizarrón 1, todo se escala para
   // caber sin necesitar deslizadores del sistema.
   // ======================================================================
