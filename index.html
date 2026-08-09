@@ -590,7 +590,7 @@
         <button class="btn-icon" id="btnZoomIn"><i class="fas fa-plus-circle"></i></button>
         <button class="btn-icon" id="btnZoomOut"><i class="fas fa-minus-circle"></i></button>
         <button class="btn-icon" id="btnRestablecerVista" title="Restablecer vista al tamaño inicial"><i class="fas fa-compress-arrows-alt"></i></button>
-        <button class="btn-icon" id="btnLupa" data-herramienta="lupa" title="Lupa (radio 2cm)"><i class="fas fa-search-plus"></i></button>
+        <button class="btn-icon" id="btnLupa" data-herramienta="lupa" title="Lupa (radio 2.5cm)"><i class="fas fa-search-plus"></i></button>
       </div>
     </div>
 
@@ -731,7 +731,7 @@
       </div>
     </div>
 
-    <div class="firma">https://sites.google.com/view/pizarron-job/inicio</div>
+    <div class="firma">Mat. Edgar Johni Bustamante Romero, Ph.D.</div>
   </div>
   </div>
 
@@ -3216,7 +3216,7 @@ class SelectionManagerCP {
   // un círculo de radio ~2cm con una vista aumentada de esa zona exacta
   // del pizarrón (fondo + dibujo + lápiz temporal + cuadrícula).
   // ======================================================================
-  const LUPA_RADIO_CM = 2;
+  const LUPA_RADIO_CM = 2.5; // se aumentó 0.5cm (antes 2cm)
   const PX_POR_CM = 37.8; // aproximación estándar: 96px/pulgada ÷ 2.54cm/pulgada
   const LUPA_RADIO_PX = Math.round(LUPA_RADIO_CM * PX_POR_CM); // ≈ 76px
   const LUPA_DIAMETRO_PX = LUPA_RADIO_PX * 2;
@@ -3284,13 +3284,17 @@ class SelectionManagerCP {
     // Se recompone en el mismo orden visual: fondo → dibujo → lápiz temporal → cuadrícula
     [Pizarra.getCanvasFondo(), Pizarra.getCanvasPrincipal(), Pizarra.getCanvasTemporal(), Pizarra.getCanvasGrid()]
       .forEach(capa => ctxLupa.drawImage(capa, sx, sy, s, s, 0, 0, LUPA_DIAMETRO_PX, LUPA_DIAMETRO_PX));
+    return radioFuente;
   }
 
   function actualizarLupa(e) {
     const { xLocal, yLocal, xCanvas, yCanvas } = coordenadasLupa(e);
     lupaOverlay.style.left = (xLocal - LUPA_RADIO_PX) + 'px';
     lupaOverlay.style.top = (yLocal - LUPA_RADIO_PX) + 'px';
-    dibujarLupa(xCanvas, yCanvas);
+    const radioFuente = dibujarLupa(xCanvas, yCanvas);
+    // Transmitir al Pizarrón 2, para que la lupa también se vea allá
+    // (esta herramienta es justamente para interactuar con los estudiantes).
+    if (typeof emitirLupa === 'function') emitirLupa(xCanvas, yCanvas, radioFuente, true);
   }
 
   function lupaPointerDown(e) {
@@ -3305,7 +3309,10 @@ class SelectionManagerCP {
   }
   function lupaPointerUp() {
     lupaArrastrando = false;
-    if (btnLupa.classList.contains('activo')) lupaOverlay.style.display = 'none';
+    if (btnLupa.classList.contains('activo')) {
+      lupaOverlay.style.display = 'none';
+      if (typeof emitirLupa === 'function') emitirLupa(0, 0, 0, false);
+    }
   }
 
   contenedor.addEventListener('mousedown', lupaPointerDown);
@@ -3440,6 +3447,16 @@ class SelectionManagerCP {
     };
     if (canalSync) canalSync.postMessage(datos);
     try { localStorage.setItem(CLAVE_MARCADOR, JSON.stringify(datos)); } catch (e) { /* almacenamiento no disponible */ }
+  }
+
+  // Transmite la posición/estado de la lupa al Pizarrón 2, para que los
+  // estudiantes vean el mismo efecto de aumento mientras el profesor
+  // señala algo — es justamente el propósito de esta herramienta.
+  // No se guarda en localStorage (posición muy efímera, cambia decenas de
+  // veces por segundo); solo viaja por el canal en vivo.
+  function emitirLupa(x, y, radioFuente, visible) {
+    if (!pizarron2Activo) return;
+    if (canalSync) canalSync.postMessage({ tipo: 'lupa', x, y, radioFuente, visible, ts: Date.now() });
   }
 
   // Dibuja (o esconde) el marcador también en el propio Pizarrón 1
