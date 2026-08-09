@@ -62,6 +62,21 @@
     }
     #canvasContenido { background: #ffffff; z-index: 1; }
     #canvasMarcador { z-index: 2; display: none; }
+    .lupa-overlay {
+      position: absolute;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.9);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.12);
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 50;
+      display: none;
+    }
+    .lupa-overlay canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
 
     .firma {
       position: absolute;
@@ -170,6 +185,11 @@
         <canvas id="canvasMarcador" width="1200" height="700"></canvas>
       </div>
 
+      <!-- LUPA (efecto de aumento, reflejado desde el Pizarrón 1) -->
+      <div class="lupa-overlay" id="lupaOverlay">
+        <canvas id="lupaCanvas"></canvas>
+      </div>
+
       <div id="mensajeEspera">
         <i class="fas fa-chalkboard"></i>
         <div>Esperando contenido del Pizarrón 1…</div>
@@ -197,6 +217,11 @@
   const CM_A_PX = 37.795;
   const MARCADOR_ANCHO_TABLERO = 6 * CM_A_PX;
   const MARCADOR_ALTO_TABLERO = 1.5 * CM_A_PX;
+  const LUPA_RADIO_CM = 2.5;
+  const PX_POR_CM = 37.8;
+  const LUPA_RADIO_PX = Math.round(LUPA_RADIO_CM * PX_POR_CM);
+  const LUPA_DIAMETRO_PX = LUPA_RADIO_PX * 2;
+  const LUPA_ZOOM = 2.2;
   const CANAL_SYNC = 'pizarron-jb-sync';
   const CLAVE_CONTENIDO = 'pizarron_jb_sync_contenido';
   const CLAVE_MARCADOR = 'pizarron_jb_sync_marcador';
@@ -207,6 +232,13 @@
   const ctxContenido = canvasContenido.getContext('2d');
   const canvasMarcador = document.getElementById('canvasMarcador');
   const ctxMarcador = canvasMarcador.getContext('2d');
+  const lupaOverlay = document.getElementById('lupaOverlay');
+  const lupaCanvas = document.getElementById('lupaCanvas');
+  const ctxLupa = lupaCanvas.getContext('2d');
+  lupaOverlay.style.width = LUPA_DIAMETRO_PX + 'px';
+  lupaOverlay.style.height = LUPA_DIAMETRO_PX + 'px';
+  lupaCanvas.width = LUPA_DIAMETRO_PX;
+  lupaCanvas.height = LUPA_DIAMETRO_PX;
   const mensajeEspera = document.getElementById('mensajeEspera');
   const indicadorEstado = document.getElementById('indicadorEstado');
   const btnZoomInEspejo = document.getElementById('btnZoomInEspejo');
@@ -343,6 +375,35 @@
   }
 
   // ======================================================================
+  // Lupa reflejada: el Pizarrón 1 envía la posición en coordenadas del
+  // tablero (no de pantalla). Aquí se traduce a la pantalla de ESTE
+  // Pizarrón 2 usando su propio zoom/desplazamiento local (que puede ser
+  // distinto al del profesor), y el contenido se recorta/amplía también
+  // con el zoom propio, para que el aumento se vea igual de consistente.
+  // ======================================================================
+  function dibujarLupaLocal(xCanvas, yCanvas) {
+    const radioFuente = LUPA_RADIO_PX / (LUPA_ZOOM * zoom);
+    const sx = xCanvas - radioFuente;
+    const sy = yCanvas - radioFuente;
+    const s = radioFuente * 2;
+    ctxLupa.clearRect(0, 0, LUPA_DIAMETRO_PX, LUPA_DIAMETRO_PX);
+    ctxLupa.drawImage(canvasContenido, sx, sy, s, s, 0, 0, LUPA_DIAMETRO_PX, LUPA_DIAMETRO_PX);
+  }
+
+  function aplicarLupa(datos) {
+    if (!datos || !datos.visible) {
+      lupaOverlay.style.display = 'none';
+      return;
+    }
+    const xLocal = datos.x * zoom + panX;
+    const yLocal = datos.y * zoom + panY;
+    lupaOverlay.style.left = (xLocal - LUPA_RADIO_PX) + 'px';
+    lupaOverlay.style.top = (yLocal - LUPA_RADIO_PX) + 'px';
+    dibujarLupaLocal(datos.x, datos.y);
+    lupaOverlay.style.display = 'block';
+  }
+
+  // ======================================================================
   // Canal de sincronización: BroadcastChannel (en vivo) + localStorage
   // como respaldo, útil si el navegador no soporta BroadcastChannel o si
   // esta pestaña se abrió después de que el Pizarrón 1 ya transmitió algo.
@@ -354,6 +415,7 @@
       if (!datos) return;
       if (datos.tipo === 'contenido') aplicarContenido(datos);
       else if (datos.tipo === 'marcador') aplicarMarcador(datos);
+      else if (datos.tipo === 'lupa') aplicarLupa(datos);
     };
   }
 
