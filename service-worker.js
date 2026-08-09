@@ -8,6 +8,7 @@ const CACHE_NAME = 'pizarron-jb-v1';
 const ARCHIVOS_APP_SHELL = [
   './',
   './index.html',
+  './pizarron2.html',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
