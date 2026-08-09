@@ -16,6 +16,7 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     /* ===== ESTILOS COMPLETOS ===== */
     * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
@@ -100,6 +101,150 @@
       cursor: not-allowed;
       pointer-events: none;
     }
+    /* ===== Interruptor (mostrar/ocultar fondo de diapositivas importadas) ===== */
+    .interruptor {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      margin: 0 2px;
+    }
+    .interruptor input { display: none; }
+    .interruptor-riel {
+      width: 34px;
+      height: 20px;
+      background: #cfd6e0;
+      border-radius: 20px;
+      position: relative;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+    .interruptor-bola {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      transition: transform 0.2s ease;
+    }
+    .interruptor input:checked + .interruptor-riel {
+      background: #2563eb;
+    }
+    .interruptor input:checked + .interruptor-riel .interruptor-bola {
+      transform: translateX(14px);
+    }
+    .interruptor.deshabilitado {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    /* ===== Botón de activación (candado) ===== */
+    #btnActivacion.activo {
+      background: #eafaf0;
+      color: #16a34a;
+    }
+    /* ===== Modal de activación ===== */
+    .modal-fondo {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 32, 0.55);
+      backdrop-filter: blur(3px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-fondo.visible { display: flex; }
+    .modal-activacion {
+      background: #ffffff;
+      border-radius: 22px;
+      padding: 30px 32px;
+      width: min(90vw, 380px);
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+    }
+    .modal-icono {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: #eef1f5;
+      color: #1a2634;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      margin: 0 auto 14px;
+    }
+    .modal-activacion h3 {
+      font-size: 1.15rem;
+      color: #1a2634;
+      margin-bottom: 8px;
+    }
+    .modal-activacion p {
+      font-size: 0.88rem;
+      color: #5a6a7a;
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+    .campos-activacion {
+      display: flex;
+      gap: 12px;
+    }
+    .campo-activacion {
+      flex: 1;
+      text-align: left;
+    }
+    .campo-activacion label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #8a96a8;
+      margin-bottom: 6px;
+    }
+    .campo-activacion input {
+      width: 100%;
+      font-size: 1.25rem;
+      letter-spacing: 4px;
+      text-align: center;
+      text-transform: uppercase;
+      padding: 12px 6px;
+      border: 2px solid #e2e7ee;
+      border-radius: 12px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      color: #1a2634;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .campo-activacion input:focus { border-color: #2563eb; }
+    .modal-mensaje {
+      min-height: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 10px;
+    }
+    .modal-mensaje.error { color: #dc2626; }
+    .modal-mensaje.exito { color: #16a34a; }
+    .modal-botones {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .btn-modal {
+      flex: 1;
+      padding: 11px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s ease;
+    }
+    .btn-modal-secundario { background: #eef1f5; color: #5a6a7a; }
+    .btn-modal-secundario:hover { background: #e2e7ee; }
+    .btn-modal-primario { background: #1a2634; color: #ffffff; }
+    .btn-modal-primario:hover { background: #223349; }
     .barra-superior .separador-vertical {
       width: 1px;
       height: 24px;
@@ -220,26 +365,31 @@
       z-index: 0;
       pointer-events: none;
     }
-    #canvasPrincipal {
+    #canvasImagenFondo {
       background: transparent;
       z-index: 1;
+      pointer-events: none;
+    }
+    #canvasPrincipal {
+      background: transparent;
+      z-index: 2;
       pointer-events: auto;
     }
     #canvasTemporal {
       background: transparent;
-      z-index: 2;
+      z-index: 3;
       pointer-events: none;
     }
     #canvasGrid {
       background: transparent;
-      z-index: 3;
+      z-index: 4;
       pointer-events: none;
       opacity: 0.5;
       display: none;
     }
     #canvasMarcador {
       background: transparent;
-      z-index: 4;
+      z-index: 5;
       pointer-events: none;
       display: none;
     }
@@ -450,6 +600,8 @@
   </div>
   <!-- BARRA SUPERIOR -->
   <div class="barra-superior" id="barraSuperior">
+    <button class="btn-icon" id="btnActivacion" title="Activar funciones (Importar PDF / Instalar app)"><i class="fas fa-lock"></i></button>
+    <div class="separador-vertical"></div>
     <button class="btn-icon" id="btnToggleBarraSuperior" title="Contraer / expandir menú"><i class="fas fa-chevron-left"></i></button>
     <div class="separador-vertical" id="separadorToggle"></div>
     <div class="iconos-barra-superior" id="iconosBarraSuperior">
@@ -468,6 +620,13 @@
       <button class="btn-icon" id="btnAbrirCuaderno" title="Abrir cuaderno (.job)"><i class="fas fa-folder-open"></i></button>
       <input type="file" id="inputAbrirCuaderno" accept=".job,.pizarra,.json,application/json" style="display:none;">
       <div class="separador-vertical"></div>
+      <button class="btn-icon" id="btnImportarPDF" title="Importar PDF — requiere activación" disabled><i class="fas fa-file-pdf"></i></button>
+      <input type="file" id="inputImportarPDF" accept=".pdf,application/pdf" style="display:none;">
+      <label class="interruptor deshabilitado" id="interruptorFondoImagen" title="Mostrar u ocultar el fondo importado">
+        <input type="checkbox" id="checkFondoImagen" checked>
+        <span class="interruptor-riel"><span class="interruptor-bola"></span></span>
+      </label>
+      <div class="separador-vertical"></div>
       <button class="btn-icon" id="btnPantallaCompleta" title="Modo pantalla completa"><i class="fas fa-expand"></i></button>
       <div class="separador-vertical"></div>
       <button class="btn-icon" id="btnAbrirPizarron2" title="Abrir Pizarrón 2 (vista para estudiantes)"><i class="fas fa-chalkboard-teacher"></i></button>
@@ -485,6 +644,7 @@
   <div class="pizarra-container" id="pizarraContainer">
     <div class="pizarra-viewport" id="viewport">
       <canvas id="canvasFondo" width="1200" height="700"></canvas>
+      <canvas id="canvasImagenFondo" width="1200" height="700"></canvas>
       <canvas id="canvasPrincipal" width="1200" height="700"></canvas>
       <canvas id="canvasTemporal" width="1200" height="700"></canvas>
       <canvas id="canvasGrid" width="1200" height="700"></canvas>
@@ -571,7 +731,7 @@
       </div>
     </div>
 
-    <div class="firma">Mat. Edgar Johni Bustamante Romero, Ph.D.</div>
+    <div class="firma">https://sites.google.com/view/pizarron-job/inicio</div>
   </div>
   </div>
 
@@ -581,6 +741,208 @@
   </div>
 </div>
 
+<!-- ===== MODAL DE ACTIVACIÓN ===== -->
+<div class="modal-fondo" id="modalActivacionFondo">
+  <div class="modal-activacion">
+    <div class="modal-icono"><i class="fas fa-lock" id="modalActivacionIcono"></i></div>
+    <h3>Activación de funciones</h3>
+    <p id="modalActivacionTexto">Ingresa tu <strong>Usuario</strong> y <strong>Clave</strong> (5 caracteres cada uno) para habilitar <strong>Importar PDF</strong> e <strong>Instalar app</strong>.</p>
+    <div class="campos-activacion">
+      <div class="campo-activacion">
+        <label for="inputUsuarioActivacion">Usuario</label>
+        <input type="text" id="inputUsuarioActivacion" maxlength="5" placeholder="USUA" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="campo-activacion">
+        <label for="inputClaveActivacion">Clave</label>
+        <input type="text" id="inputClaveActivacion" maxlength="5" placeholder="CLAVE" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="modal-mensaje" id="modalActivacionMensaje"></div>
+    <div class="modal-botones">
+      <button class="btn-modal btn-modal-secundario" id="btnCerrarActivacion">Cerrar</button>
+      <button class="btn-modal btn-modal-primario" id="btnVerificarActivacion">Verificar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======================================================================
+// MÓDULO: Activación
+// Gatea "Importar PDF" e "Instalar app" detrás de un código de 10
+// caracteres (5 = usuario/resultado esperado, 5 = contraseña/semilla).
+// El cálculo depende del año actual, por lo que el código expira cada
+// año (es intencional: funciona como una licencia que se renueva).
+// ======================================================================
+(function ModuloActivacion() {
+  const CLAVE_ACTIVACION_LS = 'pizarron_jb_activacion';
+
+  function verificarClave(clave) {
+    if (typeof clave !== 'string' || clave.length !== 10) return 0;
+    const expected = clave.slice(0, 5).toUpperCase();
+    const seed = clave.slice(5, 10).toUpperCase();
+
+    const charToNum = {};
+    const numToChar = {};
+    for (let i = 0; i <= 9; i++) {
+      const ch = String(i);
+      charToNum[ch] = i;
+      numToChar[i] = ch;
+    }
+    for (let i = 0; i < 26; i++) {
+      const ch = String.fromCharCode(65 + i);
+      const val = 10 + i;
+      charToNum[ch] = val;
+      numToChar[val] = ch;
+    }
+
+    try {
+      const v1 = [];
+      for (const ch of seed) {
+        if (!(ch in charToNum)) throw new Error('Carácter inválido');
+        v1.push(charToNum[ch]);
+      }
+      if (v1.length !== 5) return 0;
+
+      const [a, b, c, d, e] = v1;
+      const suma = a + b + c + d + e;
+      const maximo = Math.max(...v1);
+      const minimo = Math.min(...v1);
+      const promedio = Math.floor(suma / 5);
+      const maxMenos1 = maximo - 1;
+      const sumaMod7 = suma % 7;
+      const rango = maximo - minimo;
+      const quinta = 35 - b;
+      const transformado = [promedio, maxMenos1, sumaMod7, rango, quinta];
+
+      const anio = new Date().getFullYear();
+      const anioStr = String(anio).padStart(5, '0');
+      const offset = anioStr.split('').map(Number);
+      const v2 = transformado.map((val, idx) => (val + offset[idx]) % 35);
+
+      let resultado = '';
+      for (const n of v2) {
+        if (!(n in numToChar)) throw new Error('Número fuera de rango');
+        resultado += numToChar[n];
+      }
+      return (resultado === expected) ? 1 : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  const btnActivacion = document.getElementById('btnActivacion');
+  const modalFondo = document.getElementById('modalActivacionFondo');
+  const modalIcono = document.getElementById('modalActivacionIcono');
+  const modalTexto = document.getElementById('modalActivacionTexto');
+  const modalMensaje = document.getElementById('modalActivacionMensaje');
+  const inputUsuario = document.getElementById('inputUsuarioActivacion');
+  const inputClave = document.getElementById('inputClaveActivacion');
+  const btnVerificar = document.getElementById('btnVerificarActivacion');
+  const btnCerrar = document.getElementById('btnCerrarActivacion');
+
+  let activado = false;
+
+  function aplicarEstadoActivacion() {
+    const btnImportarPDF = document.getElementById('btnImportarPDF');
+    const interruptorFondoImagen = document.getElementById('interruptorFondoImagen');
+    const checkFondoImagen = document.getElementById('checkFondoImagen');
+
+    btnImportarPDF.disabled = !activado;
+    btnImportarPDF.title = activado
+      ? 'Importar PDF (cada página, como fondo de una hoja nueva)'
+      : 'Importar PDF — requiere activación';
+    interruptorFondoImagen.classList.toggle('deshabilitado', !activado);
+    checkFondoImagen.disabled = !activado;
+
+    btnActivacion.querySelector('i').className = activado ? 'fas fa-unlock' : 'fas fa-lock';
+    btnActivacion.title = activado ? 'Funciones activadas' : 'Activar funciones (Importar PDF / Instalar app)';
+    btnActivacion.classList.toggle('activo', activado);
+
+    if (activado && typeof mostrarBotonInstalarSiCorresponde === 'function') {
+      mostrarBotonInstalarSiCorresponde();
+    }
+  }
+
+  function cargarEstadoGuardado() {
+    try {
+      const guardado = JSON.parse(localStorage.getItem(CLAVE_ACTIVACION_LS) || 'null');
+      const anioActual = new Date().getFullYear();
+      if (guardado && guardado.activado && guardado.anio === anioActual) {
+        activado = true;
+      }
+    } catch (e) { /* sin datos previos válidos */ }
+    aplicarEstadoActivacion();
+  }
+
+  function guardarEstado() {
+    try {
+      localStorage.setItem(CLAVE_ACTIVACION_LS, JSON.stringify({ activado: true, anio: new Date().getFullYear() }));
+    } catch (e) { /* almacenamiento no disponible */ }
+  }
+
+  function abrirModal() {
+    modalMensaje.textContent = '';
+    modalMensaje.className = 'modal-mensaje';
+    inputUsuario.value = '';
+    inputClave.value = '';
+    if (activado) {
+      modalIcono.className = 'fas fa-unlock';
+      modalTexto.innerHTML = 'Las funciones ya están <strong>activadas</strong> para este año. Puedes ingresar un usuario y clave nuevos si quieres cambiarlos.';
+    } else {
+      modalIcono.className = 'fas fa-lock';
+      modalTexto.innerHTML = 'Ingresa tu <strong>Usuario</strong> y <strong>Clave</strong> (5 caracteres cada uno) para habilitar <strong>Importar PDF</strong> e <strong>Instalar app</strong>.';
+    }
+    modalFondo.classList.add('visible');
+    setTimeout(() => inputUsuario.focus(), 50);
+  }
+
+  function cerrarModal() {
+    modalFondo.classList.remove('visible');
+  }
+
+  function procesarVerificacion() {
+    const usuario = inputUsuario.value.trim().toUpperCase();
+    const clave = inputClave.value.trim().toUpperCase();
+    if (usuario.length !== 5 || clave.length !== 5) {
+      modalMensaje.textContent = 'Usuario y Clave deben tener 5 caracteres cada uno.';
+      modalMensaje.className = 'modal-mensaje error';
+      return;
+    }
+    const resultado = verificarClave(usuario + clave);
+    if (resultado === 1) {
+      activado = true;
+      guardarEstado();
+      aplicarEstadoActivacion();
+      modalMensaje.textContent = '✅ Datos correctos. Funciones activadas.';
+      modalMensaje.className = 'modal-mensaje exito';
+      setTimeout(cerrarModal, 900);
+    } else {
+      modalMensaje.textContent = '❌ Usuario o Clave incorrectos.';
+      modalMensaje.className = 'modal-mensaje error';
+    }
+  }
+
+  btnActivacion.addEventListener('click', abrirModal);
+  btnCerrar.addEventListener('click', cerrarModal);
+  modalFondo.addEventListener('click', (e) => { if (e.target === modalFondo) cerrarModal(); });
+  btnVerificar.addEventListener('click', procesarVerificacion);
+  [inputUsuario, inputClave].forEach((campo, i) => {
+    campo.addEventListener('keydown', (e) => { if (e.key === 'Enter') procesarVerificacion(); });
+    campo.addEventListener('input', () => {
+      campo.value = campo.value.toUpperCase();
+      // Salta automáticamente al siguiente campo al completar 5 caracteres
+      if (campo.value.length >= 5 && i === 0) inputClave.focus();
+    });
+  });
+
+  // Se expone para que el resto de módulos (importar PDF, instalar app)
+  // puedan consultar si ya está activado.
+  window.estaActivado = () => activado;
+
+  cargarEstadoGuardado();
+})();
+</script>
+
 <script>
 // ======================================================================
 // MÓDULO 1 – Pizarra (base estable del Mensaje 21)
@@ -589,18 +951,20 @@ const Pizarra = (() => {
   const contenedor = document.getElementById('pizarraContainer');
   const viewport = document.getElementById('viewport');
   const canvasFondo = document.getElementById('canvasFondo');
+  const canvasImagenFondo = document.getElementById('canvasImagenFondo');
   const canvasP = document.getElementById('canvasPrincipal');
   const canvasT = document.getElementById('canvasTemporal');
   const canvasGrid = document.getElementById('canvasGrid');
   const canvasMarcador = document.getElementById('canvasMarcador');
   const ctxFondo = canvasFondo.getContext('2d');
+  const ctxImagenFondo = canvasImagenFondo.getContext('2d');
   const ctxP = canvasP.getContext('2d');
   const ctxT = canvasT.getContext('2d');
   const ctxGrid = canvasGrid.getContext('2d');
 
   const W = 1200, H = 700;
-  canvasP.width = canvasT.width = canvasGrid.width = canvasFondo.width = canvasMarcador.width = W;
-  canvasP.height = canvasT.height = canvasGrid.height = canvasFondo.height = canvasMarcador.height = H;
+  canvasP.width = canvasT.width = canvasGrid.width = canvasFondo.width = canvasMarcador.width = canvasImagenFondo.width = W;
+  canvasP.height = canvasT.height = canvasGrid.height = canvasFondo.height = canvasMarcador.height = canvasImagenFondo.height = H;
 
   let zoom = 1;
   let panX = 0, panY = 0;
@@ -734,7 +1098,7 @@ const Pizarra = (() => {
   function borrarRect(x, y, size) {
     const ctx = getCtx();
     ctx.save();
-    ctx.fillStyle = getColorBorrado();
+    ctx.globalCompositeOperation = 'destination-out';
     ctx.fillRect(x - size/2, y - size/2, size, size);
     ctx.restore();
     guardarEstado();
@@ -790,6 +1154,34 @@ const Pizarra = (() => {
     viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
     if (onCambioTransform) onCambioTransform();
   }
+
+  // ----- Fondo de imagen importada (PDF), independiente del color de fondo -----
+  let tieneFondoImagen = false;
+  let fondoImagenVisible = true;
+
+  function setFondoImagen(dataUrl, callback) {
+    ctxImagenFondo.clearRect(0, 0, W, H);
+    tieneFondoImagen = !!dataUrl;
+    if (!dataUrl) {
+      if (onCambioContenido) onCambioContenido();
+      if (callback) callback();
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      ctxImagenFondo.drawImage(img, 0, 0);
+      if (onCambioContenido) onCambioContenido();
+      if (callback) callback();
+    };
+    img.src = dataUrl;
+  }
+  function mostrarFondoImagen(visible) {
+    fondoImagenVisible = visible;
+    canvasImagenFondo.style.display = (tieneFondoImagen && visible) ? 'block' : 'none';
+    if (onCambioContenido) onCambioContenido();
+  }
+  function tieneFondoImagenActivo() { return tieneFondoImagen && fondoImagenVisible; }
+  function getCanvasImagenFondo() { return canvasImagenFondo; }
 
   function zoomIn() {
     zoom = Math.min(8, zoom * 1.15);
@@ -853,7 +1245,7 @@ const Pizarra = (() => {
     if (tool === 'goma') {
       const ctx = getCtx();
       ctx.save();
-      ctx.fillStyle = getColorBorrado();
+      ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
       ctx.arc(x, y, grosorGoma/2, 0, Math.PI*2);
       ctx.fill();
@@ -913,7 +1305,7 @@ const Pizarra = (() => {
       const ctx = getCtx();
       if (tool === 'goma') {
         ctx.save();
-        ctx.strokeStyle = getColorBorrado();
+        ctx.globalCompositeOperation = 'destination-out';
         ctx.lineWidth = grosorGoma;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -1079,6 +1471,10 @@ const Pizarra = (() => {
     limpiarTemporal,
     toggleGrid,
     setFondo,
+    setFondoImagen,
+    mostrarFondoImagen,
+    tieneFondoImagenActivo,
+    getCanvasImagenFondo,
     getCanvas,
     ctxT,
     W,
@@ -1111,6 +1507,9 @@ class SelectionManager {
     this.canvasT = opciones.canvasTemporal;
     this.contenedor = opciones.contenedor;
     this.obtenerColorFondo = opciones.obtenerColorFondo || (() => '#ffffff');
+    this.pintarFondoEnRect = opciones.pintarFondoEnRect || ((ctx, x, y, w, h) => {
+      ctx.save(); ctx.fillStyle = this.obtenerColorFondo(); ctx.fillRect(x, y, w, h); ctx.restore();
+    });
     this.guardarEstado = opciones.guardarEstado || (() => {});
     this.handleSize = opciones.handleSize || 12;
     this.getTransform = opciones.getTransform || (() => ({ panX: 0, panY: 0, zoom: 1 }));
@@ -1329,13 +1728,9 @@ class SelectionManager {
     const { w, h } = this.dragCurrentRect;
     const newX = this.dragCurrentRect.x + dx;
     const newY = this.dragCurrentRect.y + dy;
-    const colorFondo = this.obtenerColorFondo();
     this.ctxT.clearRect(0, 0, this.W, this.H);
     const { x: origX, y: origY, w: origW, h: origH } = this.dragOriginalRect;
-    this.ctxT.save();
-    this.ctxT.fillStyle = colorFondo;
-    this.ctxT.fillRect(origX, origY, origW, origH);
-    this.ctxT.restore();
+    this.pintarFondoEnRect(this.ctxT, origX, origY, origW, origH);
     this.ctxT.drawImage(this.dragTempCanvas, newX, newY, w, h);
     this.seleccion.x = newX;
     this.seleccion.y = newY;
@@ -1360,12 +1755,8 @@ class SelectionManager {
     }
     if (w < 5) w = 5;
     if (h < 5) h = 5;
-    const colorFondo = this.obtenerColorFondo();
     this.ctxT.clearRect(0, 0, this.W, this.H);
-    this.ctxT.save();
-    this.ctxT.fillStyle = colorFondo;
-    this.ctxT.fillRect(origX, origY, origW, origH);
-    this.ctxT.restore();
+    this.pintarFondoEnRect(this.ctxT, origX, origY, origW, origH);
     this.ctxT.drawImage(this.dragTempCanvas, sx, sy, w, h);
     this.seleccion = { x: sx, y: sy, w, h };
     this.dragCurrentRect = { x: sx, y: sy, w, h };
@@ -1376,11 +1767,7 @@ class SelectionManager {
     if (!this.dragTempCanvas || !this.dragOriginalRect) return;
     const { x: origX, y: origY, w: origW, h: origH } = this.dragOriginalRect;
     const { x: newX, y: newY, w: newW, h: newH } = this.seleccion;
-    const colorFondo = this.obtenerColorFondo();
-    this.ctxP.save();
-    this.ctxP.fillStyle = colorFondo;
-    this.ctxP.fillRect(origX, origY, origW, origH);
-    this.ctxP.restore();
+    this.ctxP.clearRect(origX, origY, origW, origH);
     this.ctxP.drawImage(this.dragTempCanvas, newX, newY, newW, newH);
     this.guardarEstado();
     this.ctxT.clearRect(0, 0, this.W, this.H);
@@ -1430,6 +1817,9 @@ class SelectionManagerCP {
     this.canvasT = opciones.canvasTemporal;
     this.contenedor = opciones.contenedor;
     this.obtenerColorFondo = opciones.obtenerColorFondo || (() => '#ffffff');
+    this.pintarFondoEnRect = opciones.pintarFondoEnRect || ((ctx, x, y, w, h) => {
+      ctx.save(); ctx.fillStyle = this.obtenerColorFondo(); ctx.fillRect(x, y, w, h); ctx.restore();
+    });
     this.guardarEstado = opciones.guardarEstado || (() => {});
     this.handleSize = opciones.handleSize || 12;
     this.getTransform = opciones.getTransform || (() => ({ panX: 0, panY: 0, zoom: 1 }));
@@ -1550,11 +1940,7 @@ class SelectionManagerCP {
   eliminar(callback) {
     if (!this.seleccion) { if (callback) callback(); return; }
     const { x, y, w, h } = this.seleccion;
-    const colorFondo = this.obtenerColorFondo();
-    this.ctxP.save();
-    this.ctxP.fillStyle = colorFondo;
-    this.ctxP.fillRect(x, y, w, h);
-    this.ctxP.restore();
+    this.ctxP.clearRect(x, y, w, h);
     this.guardarEstado();
     this.limpiarSeleccion();
     this.modoCopiar = false;
@@ -1744,13 +2130,9 @@ class SelectionManagerCP {
     const { w, h } = this.dragCurrentRect;
     const newX = this.dragCurrentRect.x + dx;
     const newY = this.dragCurrentRect.y + dy;
-    const colorFondo = this.obtenerColorFondo();
     this.ctxT.clearRect(0, 0, this.W, this.H);
     const { x: origX, y: origY, w: origW, h: origH } = this.dragOriginalRect;
-    this.ctxT.save();
-    this.ctxT.fillStyle = colorFondo;
-    this.ctxT.fillRect(origX, origY, origW, origH);
-    this.ctxT.restore();
+    this.pintarFondoEnRect(this.ctxT, origX, origY, origW, origH);
     this.ctxT.drawImage(this.dragTempCanvas, newX, newY, w, h);
     this.seleccion.x = newX;
     this.seleccion.y = newY;
@@ -1775,12 +2157,8 @@ class SelectionManagerCP {
     }
     if (w < 5) w = 5;
     if (h < 5) h = 5;
-    const colorFondo = this.obtenerColorFondo();
     this.ctxT.clearRect(0, 0, this.W, this.H);
-    this.ctxT.save();
-    this.ctxT.fillStyle = colorFondo;
-    this.ctxT.fillRect(origX, origY, origW, origH);
-    this.ctxT.restore();
+    this.pintarFondoEnRect(this.ctxT, origX, origY, origW, origH);
     this.ctxT.drawImage(this.dragTempCanvas, sx, sy, w, h);
     this.seleccion = { x: sx, y: sy, w, h };
     this.dragCurrentRect = { x: sx, y: sy, w, h };
@@ -1863,6 +2241,10 @@ class SelectionManagerCP {
   const btnGuardarCuaderno = document.getElementById('btnGuardarCuaderno');
   const btnAbrirCuaderno = document.getElementById('btnAbrirCuaderno');
   const inputAbrirCuaderno = document.getElementById('inputAbrirCuaderno');
+  const btnImportarPDF = document.getElementById('btnImportarPDF');
+  const inputImportarPDF = document.getElementById('inputImportarPDF');
+  const interruptorFondoImagen = document.getElementById('interruptorFondoImagen');
+  const checkFondoImagen = document.getElementById('checkFondoImagen');
   const barraPestanas = document.getElementById('barraPestanas');
   const btnInstalarApp = document.getElementById('btnInstalarApp');
   const separadorInstalar = document.getElementById('separadorInstalar');
@@ -1890,11 +2272,30 @@ class SelectionManagerCP {
   const swatchesFondo = document.querySelectorAll('#coloresFondo .color-swatch');
 
   // Instancias independientes
+  // Pinta, dentro de un rectángulo, el fondo "real" tal como se ve en el
+  // tablero (color de fondo + la imagen importada si está activa). Se usa
+  // para la vista previa al mover/redimensionar una selección, así el
+  // hueco que va dejando se ve igual que el fondo verdadero, en vez de un
+  // parche de color plano que taparía un PDF importado.
+  function pintarFondoRealEnRect(ctx, x, y, w, h) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.fillStyle = Pizarra.getColorFondo() || '#ffffff';
+    ctx.fillRect(x, y, w, h);
+    if (Pizarra.tieneFondoImagenActivo()) {
+      ctx.drawImage(Pizarra.getCanvasImagenFondo(), 0, 0);
+    }
+    ctx.restore();
+  }
+
   const selectorNormal = new SelectionManager({
     canvasPrincipal: Pizarra.getCanvasPrincipal(),
     canvasTemporal: Pizarra.getCanvasTemporal(),
     contenedor: Pizarra.getContenedor(),
     obtenerColorFondo: Pizarra.getColorFondo,
+    pintarFondoEnRect: pintarFondoRealEnRect,
     guardarEstado: Pizarra.guardarEstado,
     getTransform: Pizarra.getTransform,
     handleSize: 12,
@@ -1905,6 +2306,7 @@ class SelectionManagerCP {
     canvasTemporal: Pizarra.getCanvasTemporal(),
     contenedor: Pizarra.getContenedor(),
     obtenerColorFondo: Pizarra.getColorFondo,
+    pintarFondoEnRect: pintarFondoRealEnRect,
     guardarEstado: Pizarra.guardarEstado,
     getTransform: Pizarra.getTransform,
     handleSize: 12,
@@ -2350,33 +2752,58 @@ class SelectionManagerCP {
         escribirVentanaSiListo();
       };
 
-      if (pagina.dibujo) {
-        const img = new Image();
-        img.onload = () => { ctxExport.drawImage(img, 0, 0); construirHoja(); };
-        img.src = pagina.dibujo;
+      const dibujarContenidoYTerminar = () => {
+        if (pagina.dibujo) {
+          const img = new Image();
+          img.onload = () => { ctxExport.drawImage(img, 0, 0); construirHoja(); };
+          img.src = pagina.dibujo;
+        } else {
+          construirHoja();
+        }
+      };
+
+      // El fondo importado (PDF), si esta página tiene uno y el interruptor
+      // está activado, se dibuja debajo del contenido, igual que se ve en
+      // el Pizarrón 1.
+      if (pagina.fondoImagen && mostrarFondoImagenGlobal) {
+        const imgFondo = new Image();
+        imgFondo.onload = () => { ctxExport.drawImage(imgFondo, 0, 0); dibujarContenidoYTerminar(); };
+        imgFondo.src = pagina.fondoImagen;
       } else {
-        construirHoja();
+        dibujarContenidoYTerminar();
       }
     });
   }
 
   // ======================================================================
   // PROCESO: ProcesoInstalarPWA
-  // Muestra un botón "Instalar" solo cuando el navegador confirma que la
-  // app cumple los requisitos de instalación (manifest + service worker
-  // + HTTPS). Al pulsarlo, dispara el diálogo nativo de instalación.
+  // El ícono aparece en cuanto el candado está activado (sin esperar a que
+  // el navegador dispare su propio aviso de instalación). Al pulsarlo: si
+  // el navegador ya tiene lista la instalación nativa, la dispara; si aún
+  // no, explica por qué (y qué revisar) en vez de no hacer nada.
   // ======================================================================
   let eventoInstalacionDiferido = null;
+
+  function mostrarBotonInstalarSiCorresponde() {
+    const activado = typeof window.estaActivado === 'function' && window.estaActivado();
+    if (activado) {
+      btnInstalarApp.style.display = 'inline-flex';
+      separadorInstalar.style.display = 'block';
+    }
+  }
+  window.mostrarBotonInstalarSiCorresponde = mostrarBotonInstalarSiCorresponde;
 
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     eventoInstalacionDiferido = e;
-    btnInstalarApp.style.display = 'inline-flex';
-    separadorInstalar.style.display = 'block';
+    mostrarBotonInstalarSiCorresponde();
   });
 
   bindButton(btnInstalarApp, async () => {
-    if (!eventoInstalacionDiferido) return;
+    if (!eventoInstalacionDiferido) {
+      alert('Este navegador todavía no ofrece instalar la app en este momento.\n\nRecarga la página, y verifica que estés usando Chrome o Edge sobre HTTPS (o que la app no esté ya instalada).');
+      return;
+    }
     eventoInstalacionDiferido.prompt();
     await eventoInstalacionDiferido.userChoice;
     eventoInstalacionDiferido = null;
@@ -2411,19 +2838,31 @@ class SelectionManagerCP {
   let paginas = [];
   let paginaActivaIndex = 0;
   let contadorPaginas = 0;
+  let mostrarFondoImagenGlobal = true;
 
   function crearPaginaVacia(nombre) {
     contadorPaginas++;
     return {
       nombre: nombre || ('Pág. ' + contadorPaginas),
       fondo: '#d9e8f5',
-      dibujo: null // dataURL PNG del contenido; null = página en blanco
+      dibujo: null, // dataURL PNG del contenido; null = página en blanco
+      fondoImagen: null // dataURL PNG de una diapositiva/página de PDF importada, o null
     };
   }
 
   function actualizarSwatchFondoSeleccionado(color) {
     const c = (color || '#ffffff').toLowerCase();
     swatchesFondo.forEach(s => s.classList.toggle('seleccionado', s.dataset.color.toLowerCase() === c));
+  }
+
+  function actualizarBotonInterruptorFondoImagen() {
+    const pagina = paginas[paginaActivaIndex];
+    const tieneImagen = !!(pagina && pagina.fondoImagen);
+    interruptorFondoImagen.classList.toggle('deshabilitado', !tieneImagen);
+    interruptorFondoImagen.title = tieneImagen
+      ? 'Mostrar u ocultar el fondo importado en esta página'
+      : 'Esta página no tiene un fondo importado';
+    checkFondoImagen.checked = mostrarFondoImagenGlobal;
   }
 
   // Guarda el contenido actual del lienzo dentro de los datos de la página activa
@@ -2441,6 +2880,9 @@ class SelectionManagerCP {
 
     Pizarra.setFondo(pagina.fondo || '#ffffff');
     actualizarSwatchFondoSeleccionado(pagina.fondo || '#ffffff');
+    Pizarra.setFondoImagen(pagina.fondoImagen || null);
+    Pizarra.mostrarFondoImagen(mostrarFondoImagenGlobal);
+    actualizarBotonInterruptorFondoImagen();
 
     // Limpiar lápiz temporal al cambiar de hoja (es efímero, no pertenece a ninguna página)
     Pizarra.limpiarTemporal();
@@ -2525,7 +2967,7 @@ class SelectionManagerCP {
       autor: 'Mat. Edgar Johni Bustamante Romero, Ph.D.',
       fecha: new Date().toISOString(),
       paginaActivaIndex,
-      paginas: paginas.map(p => ({ nombre: p.nombre, fondo: p.fondo, dibujo: p.dibujo }))
+      paginas: paginas.map(p => ({ nombre: p.nombre, fondo: p.fondo, dibujo: p.dibujo, fondoImagen: p.fondoImagen || null }))
     };
     const blob = new Blob([JSON.stringify(cuaderno)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -2553,7 +2995,8 @@ class SelectionManagerCP {
         paginas = datos.paginas.map((p, i) => ({
           nombre: p.nombre || ('Pág. ' + (i + 1)),
           fondo: p.fondo || '#ffffff',
-          dibujo: p.dibujo || null
+          dibujo: p.dibujo || null,
+          fondoImagen: p.fondoImagen || null
         }));
         contadorPaginas = paginas.length;
         const indiceInicial = Number.isInteger(datos.paginaActivaIndex)
@@ -2573,6 +3016,106 @@ class SelectionManagerCP {
     const file = e.target.files[0];
     ProcesoAbrirCuaderno(file);
     inputAbrirCuaderno.value = '';
+  });
+
+  // ======================================================================
+  // MÓDULO: ImportarPDF
+  // Importa un PDF y convierte cada una de sus páginas en el fondo de una
+  // hoja nueva del cuaderno (una página del PDF = una página del cuaderno).
+  // Ese fondo es independiente del color de fondo y del dibujo: se puede
+  // mostrar u ocultar con el interruptor, sin perder nada de lo dibujado.
+  // ======================================================================
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  // Dibuja una página del PDF a buena resolución y la encaja (sin
+  // deformarla) dentro del tablero de 1200x700, centrada, con los
+  // márgenes transparentes para que se siga viendo el color de fondo.
+  function renderizarPaginaPDF(paginaPdf) {
+    return new Promise((resolve, reject) => {
+      const viewportBase = paginaPdf.getViewport({ scale: 1 });
+      const escala = 1600 / Math.max(viewportBase.width, viewportBase.height);
+      const viewport = paginaPdf.getViewport({ scale: escala });
+
+      const canvasTemp = document.createElement('canvas');
+      canvasTemp.width = viewport.width;
+      canvasTemp.height = viewport.height;
+      const ctxTemp = canvasTemp.getContext('2d');
+
+      paginaPdf.render({ canvasContext: ctxTemp, viewport }).promise.then(() => {
+        const W = Pizarra.W, H = Pizarra.H;
+        const escalaEncaje = Math.min(W / canvasTemp.width, H / canvasTemp.height);
+        const anchoFinal = canvasTemp.width * escalaEncaje;
+        const altoFinal = canvasTemp.height * escalaEncaje;
+        const x = (W - anchoFinal) / 2;
+        const y = (H - altoFinal) / 2;
+
+        const canvasFinal = document.createElement('canvas');
+        canvasFinal.width = W;
+        canvasFinal.height = H;
+        const ctxFinal = canvasFinal.getContext('2d');
+        ctxFinal.drawImage(canvasTemp, x, y, anchoFinal, altoFinal);
+
+        resolve(canvasFinal.toDataURL('image/png'));
+      }).catch(reject);
+    });
+  }
+
+  async function ProcesoImportarPDF(file) {
+    if (!file) return;
+    if (typeof window.estaActivado === 'function' && !window.estaActivado()) {
+      alert('Esta función requiere activación. Usa el candado en el menú superior para ingresar tu código.');
+      return;
+    }
+    if (typeof pdfjsLib === 'undefined') {
+      alert('No se pudo cargar el lector de PDF. Verifica tu conexión a internet e inténtalo de nuevo.');
+      return;
+    }
+    const iconoOriginal = btnImportarPDF.innerHTML;
+    btnImportarPDF.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btnImportarPDF.disabled = true;
+    try {
+      const buffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+      const imagenesNuevas = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const paginaPdf = await pdf.getPage(i);
+        const imagen = await renderizarPaginaPDF(paginaPdf);
+        imagenesNuevas.push(imagen);
+      }
+
+      ProcesoGuardarPaginaActual(); // no perder lo que estabas trabajando
+      const indicePrimeraNueva = paginas.length;
+      const nombreBase = file.name.replace(/\.pdf$/i, '');
+      imagenesNuevas.forEach((imagen, i) => {
+        const nueva = crearPaginaVacia(`${nombreBase} · ${i + 1}`);
+        nueva.fondoImagen = imagen;
+        paginas.push(nueva);
+      });
+      mostrarFondoImagenGlobal = true;
+      ProcesoCargarPagina(indicePrimeraNueva);
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo importar el PDF. Verifica que el archivo no esté dañado ni protegido con contraseña.');
+    } finally {
+      btnImportarPDF.innerHTML = iconoOriginal;
+      btnImportarPDF.disabled = false;
+    }
+  }
+
+  bindButton(btnImportarPDF, () => inputImportarPDF.click());
+  inputImportarPDF.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    ProcesoImportarPDF(file);
+    inputImportarPDF.value = '';
+  });
+
+  // ===== Interruptor: mostrar/ocultar el fondo importado =====
+  checkFondoImagen.addEventListener('change', () => {
+    mostrarFondoImagenGlobal = checkFondoImagen.checked;
+    Pizarra.mostrarFondoImagen(mostrarFondoImagenGlobal);
   });
 
   // ======================================================================
@@ -2852,6 +3395,9 @@ class SelectionManagerCP {
     const ctxExport = canvasExport.getContext('2d');
     ctxExport.fillStyle = Pizarra.getColorFondo() || '#ffffff';
     ctxExport.fillRect(0, 0, Pizarra.W, Pizarra.H);
+    if (Pizarra.tieneFondoImagenActivo()) {
+      ctxExport.drawImage(Pizarra.getCanvasImagenFondo(), 0, 0);
+    }
     ctxExport.drawImage(Pizarra.getCanvasPrincipal(), 0, 0);
     ctxExport.drawImage(Pizarra.getCanvasTemporal(), 0, 0);
     callback(modoRapido ? canvasExport.toDataURL('image/jpeg', 0.6) : canvasExport.toDataURL('image/png'));
@@ -2994,6 +3540,7 @@ class SelectionManagerCP {
   paginas = [crearPaginaVacia('Pág. 1')];
   paginaActivaIndex = 0;
   RenderizarPestanas();
+  actualizarBotonInterruptorFondoImagen();
 
   console.log('✅ Versión final: Manita y CP funcionan de forma independiente.');
 })();
