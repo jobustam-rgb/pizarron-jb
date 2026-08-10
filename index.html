@@ -285,12 +285,17 @@
       align-items: center;
       gap: 6px;
       margin-top: 10px;
-      padding: 2px 4px;
+      margin-left: 62px; /* alinea bajo el pizarrón, dejando fuera el ancho de la barra lateral (48px) + espacio (14px) */
+      width: 1200px;     /* igual al ancho real del pizarrón: nunca se extiende más allá */
+      max-width: 100%;
       overflow-x: auto;
+      overflow-y: hidden;
+      padding: 2px 4px;
       scrollbar-width: thin;
     }
-    .barra-pestanas::-webkit-scrollbar { height: 5px; }
+    .barra-pestanas::-webkit-scrollbar { height: 6px; }
     .barra-pestanas::-webkit-scrollbar-thumb { background: #d0d9e8; border-radius: 10px; }
+    .barra-pestanas::-webkit-scrollbar-track { background: transparent; }
     .pestana {
       display: flex;
       align-items: center;
@@ -2659,7 +2664,7 @@ class SelectionManagerCP {
         <html lang="es">
         <head>
           <meta charset="UTF-8">
-          <title>Impresión · Cuaderno Pizarra</title>
+          <title>Impresión · Cuaderno JoB</title>
           <style>
             @page { size: landscape; margin: 12mm; }
             * { margin:0; padding:0; box-sizing:border-box; }
@@ -2745,7 +2750,7 @@ class SelectionManagerCP {
               <span>${fecha} · Pág. ${index + 1} de ${totalPaginas}</span>
             </div>
             <img class="imagen-pizarra" src="${imagenDataUrl}" alt="Contenido de ${pagina.nombre}">
-            <div class="pie">Mat. Edgar Johni Bustamante Romero, Ph.D.</div>
+            <div class="pie">https://sites.google.com/view/pizarron-job/inicio</div>
           </div>
         `;
         hojasListas++;
