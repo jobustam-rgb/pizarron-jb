@@ -285,7 +285,6 @@
       align-items: center;
       gap: 6px;
       margin-top: 10px;
-      margin-left: 62px; /* alinea bajo el pizarrón, dejando fuera el ancho de la barra lateral (48px) + espacio (14px) */
       width: 1200px;     /* igual al ancho real del pizarrón: nunca se extiende más allá */
       max-width: 100%;
       overflow-x: auto;
@@ -398,8 +397,21 @@
       pointer-events: none;
       display: none;
     }
+    #marcoTablero {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1200px;
+      height: 700px;
+      border: 3px solid #000000;
+      border-radius: 20px;
+      box-sizing: border-box;
+      pointer-events: none;
+      z-index: 6;
+    }
     .fila-pizarron {
       display: flex;
+      flex-direction: row-reverse;
       align-items: center;
       gap: 14px;
     }
@@ -548,6 +560,12 @@
       border-color: #1a5a2a !important;
       box-shadow: 0 0 0 2px rgba(45,143,74,0.5) !important;
     }
+    #btnMoverCP.modo-mover {
+      background: #2563eb !important;
+      color: #fff !important;
+      border-color: #1a4bbf !important;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.5) !important;
+    }
     .firma {
       position: absolute;
       bottom: 12px;
@@ -576,12 +594,12 @@
     <div class="grupo-herramientas" id="grupo1">
       <button class="toggle-grupo" id="toggleGrupo1"><i class="fas fa-chevron-down"></i> <i class="fas fa-paint-brush" style="font-size:12px;"></i></button>
       <div class="iconos-grupo">
-        <button class="btn-icon activo" id="btnLapiz" data-herramienta="lapiz"><i class="fas fa-pencil-alt"></i></button>
+        <button class="btn-icon" id="btnLapiz" data-herramienta="lapiz"><i class="fas fa-pencil-alt"></i></button>
         <button class="btn-icon" id="btnResaltador" data-herramienta="resaltador"><i class="fas fa-highlighter"></i></button>
         <button class="btn-icon" id="btnGoma" data-herramienta="goma"><i class="fas fa-eraser"></i></button>
         <button class="btn-icon" id="btnLinea" data-herramienta="linea"><i class="fas fa-minus"></i></button>
         <button class="btn-icon" id="btnRectangulo" data-herramienta="rectangulo"><i class="fas fa-border-all"></i></button>
-        <button class="btn-icon" id="btnSeleccion" data-herramienta="seleccionar"><i class="fas fa-hand-pointer"></i></button>
+        <button class="btn-icon" id="btnCP" data-herramienta="cp" title="Selección: mover, copiar, pegar, eliminar"><i class="fas fa-vector-square"></i></button>
       </div>
     </div>
     <div class="separador"></div>
@@ -601,7 +619,7 @@
 
     <!-- Botones fijos: siempre visibles, fuera de los grupos retráctiles -->
     <div class="separador"></div>
-    <button class="btn-icon" id="btnNeutro" data-herramienta="neutro" title="Modo neutro (no dibuja nada)"><i class="far fa-circle"></i></button>
+    <button class="btn-icon activo" id="btnNeutro" data-herramienta="neutro" title="Modo neutro (no dibuja nada)"><i class="far fa-circle"></i></button>
   </div>
   <!-- BARRA SUPERIOR -->
   <div class="barra-superior" id="barraSuperior">
@@ -613,8 +631,6 @@
       <button class="btn-icon" id="btnDeshacer" title="Deshacer" disabled><i class="fas fa-undo"></i></button>
       <div class="separador-vertical"></div>
       <button class="btn-icon" id="btnRehacer" title="Rehacer" disabled><i class="fas fa-redo"></i></button>
-      <div class="separador-vertical"></div>
-      <button class="btn-icon" id="btnCP" title="Copiar / Pegar / Eliminar"><i class="fas fa-vector-square"></i></button>
       <div class="separador-vertical"></div>
       <button class="btn-icon" id="btnLapizTemporal" title="Lápiz temporal (anotación rápida, 4px)"><i class="fas fa-pen-nib"></i></button>
       <button class="btn-icon" id="btnBorrarTemporal" title="Borrar anotaciones del lápiz temporal"><i class="fas fa-trash"></i></button>
@@ -654,6 +670,7 @@
       <canvas id="canvasTemporal" width="1200" height="700"></canvas>
       <canvas id="canvasGrid" width="1200" height="700"></canvas>
       <canvas id="canvasMarcador" width="1200" height="700"></canvas>
+      <div id="marcoTablero"></div>
     </div>
 
     <!-- LUPA (efecto de aumento circular) -->
@@ -730,6 +747,7 @@
     <div class="floating-panel" id="panelSeleccionCP" style="min-width:160px; pointer-events:auto;">
       <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">ACCIONES</div>
       <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+        <button class="btn-icon" id="btnMoverCP" style="width:auto; padding:4px 10px; font-size:0.8rem; pointer-events:auto;"><i class="fas fa-arrows-alt"></i> Mover</button>
         <button class="btn-icon" id="btnCopiarCP" style="width:auto; padding:4px 10px; font-size:0.8rem; pointer-events:auto;"><i class="fas fa-copy"></i> Copiar</button>
         <button class="btn-icon" id="btnPegarCP" style="width:auto; padding:4px 10px; font-size:0.8rem; pointer-events:auto;"><i class="fas fa-paste"></i> Pegar</button>
         <button class="btn-icon" id="btnEliminarCP" style="width:auto; padding:4px 10px; font-size:0.8rem; pointer-events:auto;"><i class="fas fa-trash-alt"></i> Eliminar</button>
@@ -1219,7 +1237,7 @@ const Pizarra = (() => {
 
   // ---- EVENTOS DE PUNTERO ----
   function onPointerDown(e) {
-    if (herramientaActiva === 'seleccionar' || herramientaActiva === 'cp') return;
+    if (herramientaActiva === 'cp') return;
     const { x, y } = getCoords(e);
     const tool = herramientaActiva;
 
@@ -1265,7 +1283,7 @@ const Pizarra = (() => {
   }
 
   function onPointerMove(e) {
-    if (herramientaActiva === 'seleccionar' || herramientaActiva === 'cp') return;
+    if (herramientaActiva === 'cp') return;
     const { x, y } = getCoords(e);
     const tool = herramientaActiva;
 
@@ -1341,7 +1359,7 @@ const Pizarra = (() => {
   }
 
   function onPointerUp(e) {
-    if (herramientaActiva === 'seleccionar' || herramientaActiva === 'cp') return;
+    if (herramientaActiva === 'cp') return;
     const tool = herramientaActiva;
 
     if (isPanning) {
@@ -1837,6 +1855,7 @@ class SelectionManagerCP {
     this.seleccion = null;
     this.portapapeles = null;
     this.modoCopiar = false;
+    this.modoMover = false;
     this.activo = false;
 
     this.isSelecting = false;
@@ -1853,6 +1872,7 @@ class SelectionManagerCP {
     this.btnCopiar = document.getElementById('btnCopiarCP');
     this.btnPegar = document.getElementById('btnPegarCP');
     this.btnEliminar = document.getElementById('btnEliminarCP');
+    this.btnMover = document.getElementById('btnMoverCP');
 
     this._onPointerDown = this._onPointerDown.bind(this);
     this._onPointerMove = this._onPointerMove.bind(this);
@@ -1868,6 +1888,7 @@ class SelectionManagerCP {
     this.limpiarSeleccion();
     this.modoCopiar = false;
     this.actualizarBotonCopiar();
+    this.actualizarBotonMover();
     console.log('🔍 Selección CP activada');
   }
 
@@ -1880,6 +1901,7 @@ class SelectionManagerCP {
     this.limpiarSeleccion();
     this.modoCopiar = false;
     this.actualizarBotonCopiar();
+    this.actualizarBotonMover();
     console.log('🔍 Selección CP desactivada');
   }
 
@@ -1891,8 +1913,28 @@ class SelectionManagerCP {
     this.dragTempCanvas = null;
     this.dragOriginalRect = null;
     this.dragCurrentRect = null;
+    this.modoMover = false;
     this.ctxT.clearRect(0, 0, this.W, this.H);
     if (this.panel) this.panel.classList.remove('visible');
+  }
+
+  actualizarBotonMover() {
+    if (!this.btnMover) return;
+    if (this.modoMover) {
+      this.btnMover.classList.add('modo-mover');
+      this.btnMover.innerHTML = '<i class="fas fa-arrows-alt"></i> Moviendo';
+    } else {
+      this.btnMover.classList.remove('modo-mover');
+      this.btnMover.innerHTML = '<i class="fas fa-arrows-alt"></i> Mover';
+    }
+    // El cursor dentro de la selección da una pista visual de si ya se puede arrastrar
+    this.canvasT.style.cursor = this.modoMover ? 'move' : '';
+  }
+
+  toggleMover() {
+    if (!this.seleccion) return;
+    this.modoMover = !this.modoMover;
+    this.actualizarBotonMover();
   }
 
   actualizarBotonCopiar() {
@@ -2038,23 +2080,34 @@ class SelectionManagerCP {
     const { x, y } = this._getCoords(e);
 
     if (this.seleccion) {
-      const handle = this._getHandleAt(x, y);
-      if (handle) {
-        this.resizeHandle = handle;
-        this.selectionDrag = 'resize';
-        this.startX = x;
-        this.startY = y;
-        this._iniciarArrastreContenido();
+      const dentroDeSeleccion = (
+        x >= this.seleccion.x && x <= this.seleccion.x + this.seleccion.w &&
+        y >= this.seleccion.y && y <= this.seleccion.y + this.seleccion.h
+      );
+
+      if (this.modoMover) {
+        const handle = this._getHandleAt(x, y);
+        if (handle) {
+          this.resizeHandle = handle;
+          this.selectionDrag = 'resize';
+          this.startX = x;
+          this.startY = y;
+          this._iniciarArrastreContenido();
+          return;
+        }
+        if (dentroDeSeleccion) {
+          this.selectionDrag = 'move';
+          this.startX = x;
+          this.startY = y;
+          this._iniciarArrastreContenido();
+          return;
+        }
+      } else if (dentroDeSeleccion) {
+        // Selección fijada (modo "Mover" desactivado): se mantiene tal cual,
+        // ignora el clic en vez de moverla o borrarla por accidente.
         return;
       }
-      if (x >= this.seleccion.x && x <= this.seleccion.x + this.seleccion.w &&
-          y >= this.seleccion.y && y <= this.seleccion.y + this.seleccion.h) {
-        this.selectionDrag = 'move';
-        this.startX = x;
-        this.startY = y;
-        this._iniciarArrastreContenido();
-        return;
-      }
+
       this.limpiarSeleccion();
       this.modoCopiar = false;
       this.actualizarBotonCopiar();
@@ -2215,7 +2268,6 @@ class SelectionManagerCP {
   const btnResaltador = document.getElementById('btnResaltador');
   const btnLinea = document.getElementById('btnLinea');
   const btnRectangulo = document.getElementById('btnRectangulo');
-  const btnSeleccion = document.getElementById('btnSeleccion');
   const btnFondo = document.getElementById('btnFondo');
   const btnGrid = document.getElementById('btnGrid');
   const btnMover = document.getElementById('btnMover');
@@ -2265,6 +2317,7 @@ class SelectionManagerCP {
   const panelGoma = document.getElementById('panelGoma');
   const panelFondo = document.getElementById('panelFondo');
 
+  const btnMoverCP = document.getElementById('btnMoverCP');
   const btnCopiarCP = document.getElementById('btnCopiarCP');
   const btnPegarCP = document.getElementById('btnPegarCP');
   const btnEliminarCP = document.getElementById('btnEliminarCP');
@@ -2294,17 +2347,6 @@ class SelectionManagerCP {
     }
     ctx.restore();
   }
-
-  const selectorNormal = new SelectionManager({
-    canvasPrincipal: Pizarra.getCanvasPrincipal(),
-    canvasTemporal: Pizarra.getCanvasTemporal(),
-    contenedor: Pizarra.getContenedor(),
-    obtenerColorFondo: Pizarra.getColorFondo,
-    pintarFondoEnRect: pintarFondoRealEnRect,
-    guardarEstado: Pizarra.guardarEstado,
-    getTransform: Pizarra.getTransform,
-    handleSize: 12,
-  });
 
   const selectorCP = new SelectionManagerCP({
     canvasPrincipal: Pizarra.getCanvasPrincipal(),
@@ -2366,7 +2408,7 @@ class SelectionManagerCP {
 
   // ===== Activar herramienta =====
   function setTool(tool, btn) {
-    // CP (4 puntos)
+    // CP: selección unificada (mover, redimensionar, copiar, pegar, eliminar)
     if (tool === 'cp') {
       const isActive = btn.classList.contains('activo');
       if (isActive) {
@@ -2374,10 +2416,6 @@ class SelectionManagerCP {
         btn.classList.remove('activo');
         setTool('lapiz', btnLapiz);
       } else {
-        if (selectorNormal.activo) {
-          selectorNormal.desactivar();
-          btnSeleccion.classList.remove('activo');
-        }
         document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
         btnLapiz.classList.remove('activo');
         btn.classList.add('activo');
@@ -2392,32 +2430,6 @@ class SelectionManagerCP {
     if (selectorCP.activo) {
       selectorCP.desactivar();
       btnCP.classList.remove('activo');
-    }
-
-    // Selección normal (manita)
-    if (tool === 'seleccionar') {
-      const isActive = btn.classList.contains('activo');
-      if (isActive) {
-        selectorNormal.desactivar();
-        btn.classList.remove('activo');
-        cerrarPaneles();
-        Pizarra.setHerramienta('lapiz', 'principal');
-        btnLapiz.classList.add('activo');
-      } else {
-        Pizarra.setHerramienta('seleccionar', 'principal');
-        selectorNormal.activar();
-        btn.classList.add('activo');
-        document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
-        btn.classList.add('activo');
-        cerrarPaneles();
-      }
-      return;
-    }
-
-    // Desactivar selección normal si está activa
-    if (selectorNormal.activo) {
-      selectorNormal.desactivar();
-      btnSeleccion.classList.remove('activo');
     }
 
     // Resto de herramientas
@@ -2470,7 +2482,6 @@ class SelectionManagerCP {
       return;
     }
     if (selectorCP.activo) { selectorCP.desactivar(); btnCP.classList.remove('activo'); }
-    if (selectorNormal.activo) { selectorNormal.desactivar(); btnSeleccion.classList.remove('activo'); }
     document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
     cerrarPaneles();
 
@@ -2508,7 +2519,7 @@ class SelectionManagerCP {
   bindButton(btnGoma, () => setTool('goma', btnGoma));
   bindButton(btnLinea, () => setTool('linea', btnLinea));
   bindButton(btnRectangulo, () => setTool('rectangulo', btnRectangulo));
-  bindButton(btnSeleccion, () => setTool('seleccionar', btnSeleccion));
+  bindButton(btnCP, () => setTool('cp', btnCP));
   bindButton(btnFondo, () => setTool('fondo', btnFondo));
   bindButton(btnGrid, () => { const est = Pizarra.toggleGrid(); btnGrid.classList.toggle('activo', est); });
   bindButton(btnMover, () => { if (btnMover.classList.contains('activo')) setTool('lapiz', btnLapiz); else setTool('mover', btnMover); });
@@ -2541,7 +2552,6 @@ class SelectionManagerCP {
   bindButton(btnRestablecerVista, () => ProcesoRestablecerVista());
   bindButton(btnDeshacer, () => { Pizarra.deshacer(); Pizarra.actualizarBotonesHistorial(); });
   bindButton(btnRehacer, () => { Pizarra.rehacer(); Pizarra.actualizarBotonesHistorial(); });
-  bindButton(btnCP, () => setTool('cp', btnCP));
   bindButton(btnImprimir, () => ProcesoImprimirPizarra());
   bindButton(btnLapizTemporal, () => ProcesoActivarLapizTemporal());
   bindButton(btnBorrarTemporal, () => ProcesoLimpiarLapizTemporal());
@@ -2583,6 +2593,7 @@ class SelectionManagerCP {
     }, { passive: false });
   }
 
+  bindActionCP(btnMoverCP, () => selectorCP.toggleMover());
   bindActionCP(btnCopiarCP, () => selectorCP.copiar());
   bindActionCP(btnPegarCP, () => {
     selectorCP.pegar(() => {
@@ -2664,7 +2675,7 @@ class SelectionManagerCP {
         <html lang="es">
         <head>
           <meta charset="UTF-8">
-          <title>Impresión · Cuaderno JoB</title>
+          <title>Impresión · Cuaderno Pizarra</title>
           <style>
             @page { size: landscape; margin: 12mm; }
             * { margin:0; padding:0; box-sizing:border-box; }
@@ -2969,7 +2980,7 @@ class SelectionManagerCP {
     const cuaderno = {
       tipo: 'cuaderno-pizarra-jb',
       version: 1,
-      autor: 'https://sites.google.com/view/pizarron-job/inicio',
+      autor: 'Mat. Edgar Johni Bustamante Romero, Ph.D.',
       fecha: new Date().toISOString(),
       paginaActivaIndex,
       paginas: paginas.map(p => ({ nombre: p.nombre, fondo: p.fondo, dibujo: p.dibujo, fondoImagen: p.fondoImagen || null }))
@@ -3544,14 +3555,11 @@ class SelectionManagerCP {
   bindButton(btnMoverAbajo, () => ProcesoMoverVista(0, -MARCADOR_ALTO_TABLERO));
 
   // ===== Inicialización =====
-  Pizarra.setHerramienta('lapiz', 'principal');
+  Pizarra.setHerramienta('neutro', 'principal');
   Pizarra.setColor('#1a1a1a');
   Pizarra.setGrosor(3, 'principal');
   Pizarra.setOpacidad(100, 'principal');
   Pizarra.setFondo('#d9e8f5');
-  panelLapiz.classList.add('visible');
-  panelLapiz.style.display = 'flex';
-  posicionarPanel(btnLapiz, panelLapiz);
 
   Pizarra.inicializarHistorial();
 
