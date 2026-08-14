@@ -2617,10 +2617,18 @@ class SelectionManagerCP {
   });
 
   // ======================================================================
-  // PROCESO: ProcesoImprimirPizarra
+  // PROCESO: ProcesoImprimirPizarra (VERSIÓN FUNCIONAL EXTRAÍDA DE index_0.html)
   // Genera una vista de impresión limpia (sin barras ni controles),
   // usando el contenido actual del canvas principal, con marca de autoría.
   // ======================================================================
+  // [REEMPLAZO COMPLETO DE LAS FUNCIONES DE IMPRESIÓN]
+  // ======================================================================
+  function ProcesoGuardarPaginaActual() {
+    if (!paginas[paginaActivaIndex]) return;
+    paginas[paginaActivaIndex].dibujo = Pizarra.getCanvasPrincipal().toDataURL('image/png');
+    paginas[paginaActivaIndex].fondo = Pizarra.getColorFondo();
+  }
+
   function ProcesoImprimirPizarra() {
     // Asegurar que la página visible en este momento quede guardada en el
     // arreglo de páginas antes de armar la impresión completa.
@@ -2763,6 +2771,7 @@ class SelectionManagerCP {
       }
     });
   }
+  // ===== FIN DE REEMPLAZO DE IMPRESIÓN =====
 
   // ======================================================================
   // PROCESO: ProcesoInstalarPWA
@@ -3537,7 +3546,7 @@ class SelectionManagerCP {
   Pizarra.inicializarHistorial();
 
   [toggleGrupo1, toggleGrupo2].forEach(t => t.querySelector('i:first-child').className = 'fas fa-chevron-down');
-  selectorCP.actualizarBotonCopiar();
+  selectorCP.actualizarBotonesPanel();
 
   // El cuaderno arranca con una sola página en blanco (la que ya está dibujada)
   paginas = [crearPaginaVacia('Pág. 1')];
@@ -3545,7 +3554,7 @@ class SelectionManagerCP {
   RenderizarPestanas();
   actualizarBotonInterruptorFondoImagen();
 
-  console.log('✅ Versión final: Manita y CP funcionan de forma independiente.');
+  console.log('✅ Versión con CP (Copiar/Cortar) e impresión reparada.');
 })();
 </script>
 </body>
