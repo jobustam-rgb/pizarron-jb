@@ -554,17 +554,22 @@
       border-color: #1a2634;
       background: #d0d9e8;
     }
+    .btn-cp-accion {
+      width: 34px;
+      height: 34px;
+      font-size: 0.85rem;
+    }
     #btnCopiarCP.modo-copiar {
       background: #2d8f4a !important;
       color: #fff !important;
       border-color: #1a5a2a !important;
       box-shadow: 0 0 0 2px rgba(45,143,74,0.5) !important;
     }
-    #btnMoverCP.modo-mover {
-      background: #2563eb !important;
+    #btnCortarCP.modo-cortar {
+      background: #c2410c !important;
       color: #fff !important;
-      border-color: #1a4bbf !important;
-      box-shadow: 0 0 0 2px rgba(37,99,235,0.5) !important;
+      border-color: #8a2e08 !important;
+      box-shadow: 0 0 0 2px rgba(194,65,12,0.5) !important;
     }
     .firma {
       position: absolute;
@@ -744,13 +749,12 @@
     </div>
 
     <!-- PANEL CP (4 puntos) -->
-    <div class="floating-panel" id="panelSeleccionCP" style="min-width:160px; pointer-events:auto;">
-      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">ACCIONES</div>
-      <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
-        <button class="btn-icon" id="btnMoverCP" style="width:auto; padding:4px 10px; font-size:0.8rem; pointer-events:auto;"><i class="fas fa-arrows-alt"></i> Mover</button>
-        <button class="btn-icon" id="btnCopiarCP" style="width:auto; padding:4px 10px; font-size:0.8rem; pointer-events:auto;"><i class="fas fa-copy"></i> Copiar</button>
-        <button class="btn-icon" id="btnPegarCP" style="width:auto; padding:4px 10px; font-size:0.8rem; pointer-events:auto;"><i class="fas fa-paste"></i> Pegar</button>
-        <button class="btn-icon" id="btnEliminarCP" style="width:auto; padding:4px 10px; font-size:0.8rem; pointer-events:auto;"><i class="fas fa-trash-alt"></i> Eliminar</button>
+    <div class="floating-panel" id="panelSeleccionCP" style="min-width:auto; pointer-events:auto;">
+      <div style="display:flex; gap:6px; justify-content:center;">
+        <button class="btn-icon btn-cp-accion" id="btnCopiarCP" title="Copiar y mover (deja el original)"><i class="fas fa-copy"></i></button>
+        <button class="btn-icon btn-cp-accion" id="btnCortarCP" title="Cortar y mover (quita el original)"><i class="fas fa-cut"></i></button>
+        <button class="btn-icon btn-cp-accion" id="btnPegarCP" title="Confirmar posición" disabled><i class="fas fa-check"></i></button>
+        <button class="btn-icon btn-cp-accion" id="btnEliminarCP" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
       </div>
     </div>
 
@@ -1854,8 +1858,7 @@ class SelectionManagerCP {
 
     this.seleccion = null;
     this.portapapeles = null;
-    this.modoCopiar = false;
-    this.modoMover = false;
+    this.tipoOperacion = null; // null | 'copiar' | 'cortar'
     this.activo = false;
 
     this.isSelecting = false;
@@ -1870,9 +1873,9 @@ class SelectionManagerCP {
 
     this.panel = document.getElementById('panelSeleccionCP');
     this.btnCopiar = document.getElementById('btnCopiarCP');
+    this.btnCortar = document.getElementById('btnCortarCP');
     this.btnPegar = document.getElementById('btnPegarCP');
     this.btnEliminar = document.getElementById('btnEliminarCP');
-    this.btnMover = document.getElementById('btnMoverCP');
 
     this._onPointerDown = this._onPointerDown.bind(this);
     this._onPointerMove = this._onPointerMove.bind(this);
@@ -1886,9 +1889,6 @@ class SelectionManagerCP {
     this._addEvent(window, 'pointermove', this._onPointerMove);
     this._addEvent(window, 'pointerup', this._onPointerUp);
     this.limpiarSeleccion();
-    this.modoCopiar = false;
-    this.actualizarBotonCopiar();
-    this.actualizarBotonMover();
     console.log('🔍 Selección CP activada');
   }
 
@@ -1899,9 +1899,6 @@ class SelectionManagerCP {
     this._removeEvent(window, 'pointermove', this._onPointerMove);
     this._removeEvent(window, 'pointerup', this._onPointerUp);
     this.limpiarSeleccion();
-    this.modoCopiar = false;
-    this.actualizarBotonCopiar();
-    this.actualizarBotonMover();
     console.log('🔍 Selección CP desactivada');
   }
 
@@ -1913,85 +1910,67 @@ class SelectionManagerCP {
     this.dragTempCanvas = null;
     this.dragOriginalRect = null;
     this.dragCurrentRect = null;
-    this.modoMover = false;
+    this.tipoOperacion = null;
     this.ctxT.clearRect(0, 0, this.W, this.H);
     if (this.panel) this.panel.classList.remove('visible');
+    this.actualizarBotonesPanel();
   }
 
-  actualizarBotonMover() {
-    if (!this.btnMover) return;
-    if (this.modoMover) {
-      this.btnMover.classList.add('modo-mover');
-      this.btnMover.innerHTML = '<i class="fas fa-arrows-alt"></i> Moviendo';
-    } else {
-      this.btnMover.classList.remove('modo-mover');
-      this.btnMover.innerHTML = '<i class="fas fa-arrows-alt"></i> Mover';
-    }
-    // El cursor dentro de la selección da una pista visual de si ya se puede arrastrar
-    this.canvasT.style.cursor = this.modoMover ? 'move' : '';
+  // Habilita/deshabilita los botones según el estado: mientras Copiar o
+  // Cortar están "en vuelo" (arrastrando/deformando), solo Pegar responde,
+  // para evitar acciones ambiguas a mitad de la operación.
+  actualizarBotonesPanel() {
+    const enOperacion = !!this.tipoOperacion;
+    [this.btnCopiar, this.btnCortar, this.btnEliminar].forEach(b => { if (b) b.disabled = enOperacion; });
+    if (this.btnPegar) this.btnPegar.disabled = !enOperacion;
+    if (this.btnCopiar) this.btnCopiar.classList.toggle('modo-copiar', this.tipoOperacion === 'copiar');
+    if (this.btnCortar) this.btnCortar.classList.toggle('modo-cortar', this.tipoOperacion === 'cortar');
+    this.canvasT.style.cursor = enOperacion ? 'move' : '';
   }
 
-  toggleMover() {
-    if (!this.seleccion) return;
-    this.modoMover = !this.modoMover;
-    this.actualizarBotonMover();
-  }
-
-  actualizarBotonCopiar() {
-    if (!this.btnCopiar) return;
-    if (this.modoCopiar) {
-      this.btnCopiar.classList.add('modo-copiar');
-      this.btnCopiar.innerHTML = '<i class="fas fa-copy"></i> Copiado';
-    } else {
-      this.btnCopiar.classList.remove('modo-copiar');
-      this.btnCopiar.innerHTML = '<i class="fas fa-copy"></i> Copiar';
-    }
-  }
-
-  copiar() {
-    if (!this.seleccion || this.seleccion.w < 2 || this.seleccion.h < 2) return;
-    if (this.modoCopiar) return;
+  // Captura el contenido de la selección y activa el modo mover/deformar,
+  // sin tocar aún el original (eso se decide recién al pulsar "Pegar").
+  _prepararOperacion(tipo) {
+    if (!this.seleccion || this.tipoOperacion) return;
     const { x, y, w, h } = this.seleccion;
+    if (w < 2 || h < 2) return;
     const imgData = this.ctxP.getImageData(x, y, w, h);
-    const temp = document.createElement('canvas');
-    temp.width = w;
-    temp.height = h;
-    temp.getContext('2d').putImageData(imgData, 0, 0);
-    this.portapapeles = temp.toDataURL();
-    this.modoCopiar = true;
-    this.actualizarBotonCopiar();
-    console.log('📋 CP: copiado');
+    this.dragTempCanvas = document.createElement('canvas');
+    this.dragTempCanvas.width = w;
+    this.dragTempCanvas.height = h;
+    this.dragTempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+    this.dragOriginalRect = { x, y, w, h };
+    this.dragCurrentRect = { x, y, w, h };
+    this.tipoOperacion = tipo;
+    this.actualizarBotonesPanel();
+    this.dibujarSeleccion();
   }
+
+  copiar() { this._prepararOperacion('copiar'); }
+  cortar() { this._prepararOperacion('cortar'); }
 
   pegar(callback) {
-    if (!this.portapapeles || !this.modoCopiar) {
+    if (!this.tipoOperacion || !this.dragTempCanvas || !this.dragCurrentRect) {
       if (callback) callback();
       return;
     }
-    if (!this.seleccion || this.seleccion.w < 2 || this.seleccion.h < 2) {
-      if (callback) callback();
-      return;
+    if (this.tipoOperacion === 'cortar') {
+      const { x, y, w, h } = this.dragOriginalRect;
+      this.ctxP.clearRect(x, y, w, h);
     }
-    const { x, y, w, h } = this.seleccion;
-    const img = new Image();
-    img.onload = () => {
-      this.ctxP.drawImage(img, x, y, w, h);
-      this.guardarEstado();
-      this.modoCopiar = false;
-      this.actualizarBotonCopiar();
-      if (callback) callback();
-    };
-    img.src = this.portapapeles;
+    const { x, y, w, h } = this.dragCurrentRect;
+    this.ctxP.drawImage(this.dragTempCanvas, x, y, w, h);
+    this.guardarEstado();
+    this.limpiarSeleccion();
+    if (callback) callback();
   }
 
   eliminar(callback) {
-    if (!this.seleccion) { if (callback) callback(); return; }
+    if (!this.seleccion || this.tipoOperacion) { if (callback) callback(); return; }
     const { x, y, w, h } = this.seleccion;
     this.ctxP.clearRect(x, y, w, h);
     this.guardarEstado();
     this.limpiarSeleccion();
-    this.modoCopiar = false;
-    this.actualizarBotonCopiar();
     if (callback) callback();
   }
 
@@ -2029,6 +2008,7 @@ class SelectionManagerCP {
       this.panel.style.left = Math.max(10, Math.min(px, window.innerWidth - panelWidth - 10)) + 'px';
       this.panel.style.top = Math.max(10, Math.min(py, window.innerHeight - panelHeight - 10)) + 'px';
     }
+    this.actualizarBotonesPanel();
   }
 
   _getHandles(x, y, w, h) {
@@ -2085,32 +2065,29 @@ class SelectionManagerCP {
         y >= this.seleccion.y && y <= this.seleccion.y + this.seleccion.h
       );
 
-      if (this.modoMover) {
+      if (this.tipoOperacion) {
         const handle = this._getHandleAt(x, y);
         if (handle) {
           this.resizeHandle = handle;
           this.selectionDrag = 'resize';
           this.startX = x;
           this.startY = y;
-          this._iniciarArrastreContenido();
           return;
         }
         if (dentroDeSeleccion) {
           this.selectionDrag = 'move';
           this.startX = x;
           this.startY = y;
-          this._iniciarArrastreContenido();
           return;
         }
+        // Clic afuera con una operación pendiente: se cancela sin tocar el original
+        this.limpiarSeleccion();
       } else if (dentroDeSeleccion) {
-        // Selección fijada (modo "Mover" desactivado): se mantiene tal cual,
-        // ignora el clic en vez de moverla o borrarla por accidente.
+        // Seleccionado, pero sin Copiar/Cortar aún: queda fijo, ignora el clic
         return;
+      } else {
+        this.limpiarSeleccion();
       }
-
-      this.limpiarSeleccion();
-      this.modoCopiar = false;
-      this.actualizarBotonCopiar();
     }
     this.isSelecting = true;
     this.startX = x;
@@ -2317,8 +2294,8 @@ class SelectionManagerCP {
   const panelGoma = document.getElementById('panelGoma');
   const panelFondo = document.getElementById('panelFondo');
 
-  const btnMoverCP = document.getElementById('btnMoverCP');
   const btnCopiarCP = document.getElementById('btnCopiarCP');
+  const btnCortarCP = document.getElementById('btnCortarCP');
   const btnPegarCP = document.getElementById('btnPegarCP');
   const btnEliminarCP = document.getElementById('btnEliminarCP');
 
@@ -2582,31 +2559,27 @@ class SelectionManagerCP {
     btn.addEventListener('pointerdown', function(e) {
       e.preventDefault();
       e.stopPropagation();
+      if (btn.disabled) return;
       actionFn();
-      selectorCP.actualizarBotonCopiar();
     });
     btn.addEventListener('touchstart', function(e) {
       e.preventDefault();
       e.stopPropagation();
+      if (btn.disabled) return;
       actionFn();
-      selectorCP.actualizarBotonCopiar();
     }, { passive: false });
   }
 
-  bindActionCP(btnMoverCP, () => selectorCP.toggleMover());
   bindActionCP(btnCopiarCP, () => selectorCP.copiar());
+  bindActionCP(btnCortarCP, () => selectorCP.cortar());
   bindActionCP(btnPegarCP, () => {
     selectorCP.pegar(() => {
-      selectorCP.limpiarSeleccion();
       setTool('lapiz', btnLapiz);
-      selectorCP.actualizarBotonCopiar();
     });
   });
   bindActionCP(btnEliminarCP, () => {
     selectorCP.eliminar(() => {
-      selectorCP.limpiarSeleccion();
       setTool('lapiz', btnLapiz);
-      selectorCP.actualizarBotonCopiar();
     });
   });
 
