@@ -2386,22 +2386,25 @@ class SelectionManagerCP {
   // ===== Activar herramienta =====
   function setTool(tool, btn) {
     // CP: selección unificada (mover, redimensionar, copiar, pegar, eliminar)
-    if (tool === 'cp') {
-      const isActive = btn.classList.contains('activo');
-      if (isActive) {
-        selectorCP.desactivar();
-        btn.classList.remove('activo');
-        setTool('lapiz', btnLapiz);
-      } else {
-        document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
-        btnLapiz.classList.remove('activo');
-        btn.classList.add('activo');
-        Pizarra.setHerramienta('cp', 'principal');
-        selectorCP.activar();
-        cerrarPaneles();
-      }
-      return;
-    }
+
+if (tool === 'cp') {
+  const isActive = btn.classList.contains('activo');
+  if (isActive) {
+    selectorCP.desactivar();
+    btn.classList.remove('activo');
+    // En lugar de ir a lápiz, pasar a neutro
+    Pizarra.setHerramienta('neutro', 'principal');
+    document.getElementById('btnNeutro').classList.add('activo');
+  } else {
+    document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
+    btnLapiz.classList.remove('activo');
+    btn.classList.add('activo');
+    Pizarra.setHerramienta('cp', 'principal');
+    selectorCP.activar();
+    cerrarPaneles();
+  }
+  return;
+}
 
     // Si CP está activo, desactivarlo
     if (selectorCP.activo) {
@@ -2499,7 +2502,7 @@ class SelectionManagerCP {
   bindButton(btnCP, () => setTool('cp', btnCP));
   bindButton(btnFondo, () => setTool('fondo', btnFondo));
   bindButton(btnGrid, () => { const est = Pizarra.toggleGrid(); btnGrid.classList.toggle('activo', est); });
-  bindButton(btnMover, () => { if (btnMover.classList.contains('activo')) setTool('lapiz', btnLapiz); else setTool('mover', btnMover); });
+  bindButton(btnMover, () => { if (btnMover.classList.contains('activo')) setTool('neutro', btnNeutro); else setTool('mover', btnMover); });
   bindButton(btnZoomIn, () => Pizarra.zoomIn());
   bindButton(btnZoomOut, () => Pizarra.zoomOut());
 
@@ -2574,12 +2577,12 @@ class SelectionManagerCP {
   bindActionCP(btnCortarCP, () => selectorCP.cortar());
   bindActionCP(btnPegarCP, () => {
     selectorCP.pegar(() => {
-      setTool('lapiz', btnLapiz);
+     setTool('neutro', btnNeutro);
     });
   });
   bindActionCP(btnEliminarCP, () => {
     selectorCP.eliminar(() => {
-      setTool('lapiz', btnLapiz);
+     setTool('neutro', btnNeutro);
     });
   });
 
@@ -3233,7 +3236,7 @@ class SelectionManagerCP {
     if (yaActiva) {
       btnLupa.classList.remove('activo');
       lupaOverlay.style.display = 'none';
-      setTool('lapiz', btnLapiz);
+      setTool('neutro', btnNeutro);
       return;
     }
     setTool('lupa', btnLupa);
