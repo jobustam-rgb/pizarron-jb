@@ -587,6 +587,19 @@
     }
     /* El escalado ahora es dinámico (ver ProcesoAjustarPantalla en el script),
        por eso ya no se usan media queries fijos aquí. */
+
+    /* ===== ESTILO PARA INDICADOR DE ZOOM ===== */
+ #indicadorZoom {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #3a3f4b;
+  text-align: center;
+  padding: 4px 0;
+  width: 100%;
+  background: rgba(0,0,0,0.04);
+  border-radius: 12px;
+  user-select: none;
+}
   </style>
 </head>
 <body>
@@ -617,8 +630,10 @@
         <button class="btn-icon" id="btnMover" data-herramienta="mover"><i class="fas fa-arrows-alt"></i></button>
         <button class="btn-icon" id="btnZoomIn"><i class="fas fa-plus-circle"></i></button>
         <button class="btn-icon" id="btnZoomOut"><i class="fas fa-minus-circle"></i></button>
+<span id="indicadorZoom" style="font-size:0.75rem; font-weight:600; color:#3a3f4b; text-align:center; padding:2px 0; width:100%;">100%</span>
         <button class="btn-icon" id="btnRestablecerVista" title="Restablecer vista al tamaño inicial"><i class="fas fa-compress-arrows-alt"></i></button>
         <button class="btn-icon" id="btnLupa" data-herramienta="lupa" title="Lupa (radio 2.5cm)"><i class="fas fa-search-plus"></i></button>
+
       </div>
     </div>
 
@@ -664,7 +679,8 @@
       <button class="btn-icon" id="btnMoverAbajo" title="Mover la vista hacia abajo"><i class="fas fa-arrow-down"></i></button>
       <div class="separador-vertical" id="separadorInstalar" style="display:none;"></div>
       <button class="btn-icon" id="btnInstalarApp" title="Instalar como aplicación" style="display:none;"><i class="fas fa-download"></i></button>
-    </div>
+
+         </div>
   </div>
 
   <div class="pizarra-container" id="pizarraContainer">
@@ -2386,25 +2402,22 @@ class SelectionManagerCP {
   // ===== Activar herramienta =====
   function setTool(tool, btn) {
     // CP: selección unificada (mover, redimensionar, copiar, pegar, eliminar)
-
-if (tool === 'cp') {
-  const isActive = btn.classList.contains('activo');
-  if (isActive) {
-    selectorCP.desactivar();
-    btn.classList.remove('activo');
-    // En lugar de ir a lápiz, pasar a neutro
-    Pizarra.setHerramienta('neutro', 'principal');
-    document.getElementById('btnNeutro').classList.add('activo');
-  } else {
-    document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
-    btnLapiz.classList.remove('activo');
-    btn.classList.add('activo');
-    Pizarra.setHerramienta('cp', 'principal');
-    selectorCP.activar();
-    cerrarPaneles();
-  }
-  return;
-}
+    if (tool === 'cp') {
+      const isActive = btn.classList.contains('activo');
+      if (isActive) {
+        selectorCP.desactivar();
+        btn.classList.remove('activo');
+        setTool('lapiz', btnLapiz);
+      } else {
+        document.querySelectorAll('.barra-lateral .btn-icon[data-herramienta]').forEach(b => b.classList.remove('activo'));
+        btnLapiz.classList.remove('activo');
+        btn.classList.add('activo');
+        Pizarra.setHerramienta('cp', 'principal');
+        selectorCP.activar();
+        cerrarPaneles();
+      }
+      return;
+    }
 
     // Si CP está activo, desactivarlo
     if (selectorCP.activo) {
@@ -2502,9 +2515,16 @@ if (tool === 'cp') {
   bindButton(btnCP, () => setTool('cp', btnCP));
   bindButton(btnFondo, () => setTool('fondo', btnFondo));
   bindButton(btnGrid, () => { const est = Pizarra.toggleGrid(); btnGrid.classList.toggle('activo', est); });
-  bindButton(btnMover, () => { if (btnMover.classList.contains('activo')) setTool('neutro', btnNeutro); else setTool('mover', btnMover); });
-  bindButton(btnZoomIn, () => Pizarra.zoomIn());
-  bindButton(btnZoomOut, () => Pizarra.zoomOut());
+  bindButton(btnMover, () => { if (btnMover.classList.contains('activo')) setTool('lapiz', btnLapiz); else setTool('mover', btnMover); });
+  // --- Botones de Zoom con actualización del indicador ---
+  bindButton(btnZoomIn, () => {
+    Pizarra.zoomIn();
+    actualizarIndicadorZoom();
+  });
+  bindButton(btnZoomOut, () => {
+    Pizarra.zoomOut();
+    actualizarIndicadorZoom();
+  });
 
   // ======================================================================
   // PROCESO: ProcesoRestablecerVista
@@ -2528,6 +2548,7 @@ if (tool === 'cp') {
       btnRestablecerVista.classList.remove('activo');
       btnRestablecerVista.title = 'Restablecer vista al tamaño inicial';
     }
+    actualizarIndicadorZoom();
   }
   bindButton(btnRestablecerVista, () => ProcesoRestablecerVista());
   bindButton(btnDeshacer, () => { Pizarra.deshacer(); Pizarra.actualizarBotonesHistorial(); });
@@ -2577,12 +2598,12 @@ if (tool === 'cp') {
   bindActionCP(btnCortarCP, () => selectorCP.cortar());
   bindActionCP(btnPegarCP, () => {
     selectorCP.pegar(() => {
-     setTool('neutro', btnNeutro);
+      setTool('lapiz', btnLapiz);
     });
   });
   bindActionCP(btnEliminarCP, () => {
     selectorCP.eliminar(() => {
-     setTool('neutro', btnNeutro);
+      setTool('lapiz', btnLapiz);
     });
   });
 
@@ -3236,7 +3257,7 @@ if (tool === 'cp') {
     if (yaActiva) {
       btnLupa.classList.remove('activo');
       lupaOverlay.style.display = 'none';
-      setTool('neutro', btnNeutro);
+      setTool('lapiz', btnLapiz);
       return;
     }
     setTool('lupa', btnLupa);
@@ -3539,6 +3560,14 @@ if (tool === 'cp') {
   bindButton(btnMoverArriba, () => ProcesoMoverVista(0, MARCADOR_ALTO_TABLERO));
   bindButton(btnMoverAbajo, () => ProcesoMoverVista(0, -MARCADOR_ALTO_TABLERO));
 
+  // ===== Función para actualizar el indicador de zoom =====
+  function actualizarIndicadorZoom() {
+    const zoom = Pizarra.getTransform().zoom;
+    const porcentaje = Math.round(zoom * 100);
+    const indicador = document.getElementById('indicadorZoom');
+    if (indicador) indicador.textContent = porcentaje + '%';
+  }
+
   // ===== Inicialización =====
   Pizarra.setHerramienta('neutro', 'principal');
   Pizarra.setColor('#1a1a1a');
@@ -3557,7 +3586,10 @@ if (tool === 'cp') {
   RenderizarPestanas();
   actualizarBotonInterruptorFondoImagen();
 
-  console.log('✅ Versión con CP (Copiar/Cortar) e impresión reparada.');
+  // Inicializar el indicador de zoom
+  actualizarIndicadorZoom();
+
+  console.log('✅ Versión con CP (Copiar/Cortar), impresión reparada e indicador de zoom.');
 })();
 </script>
 </body>
