@@ -245,12 +245,16 @@
     .btn-modal-secundario:hover { background: #e2e7ee; }
     .btn-modal-primario { background: #1a2634; color: #ffffff; }
     .btn-modal-primario:hover { background: #223349; }
-    .barra-superior .separador-vertical {
+/* ===== separador 1 ===== 
+ .barra-superior .separador-vertical {
       width: 1px;
       height: 24px;
       background: #d0d7e2;
       margin: 0 2px;
     }
+*/
+
+   
     .pizarra-container {
       position: relative;
       width: 1200px;
@@ -645,13 +649,14 @@
   <div class="barra-superior" id="barraSuperior">
     <button class="btn-icon" id="btnActivacion" title="Activar funciones (Importar PDF / Instalar app)"><i class="fas fa-lock"></i></button>
     <div class="separador-vertical"></div>
-    <button class="btn-icon" id="btnToggleBarraSuperior" title="Contraer / expandir menú"><i class="fas fa-chevron-left"></i></button>
-    <div class="separador-vertical" id="separadorToggle"></div>
-    <div class="iconos-barra-superior" id="iconosBarraSuperior">
-      <button class="btn-icon" id="btnDeshacer" title="Deshacer" disabled><i class="fas fa-undo"></i></button>
+<button class="btn-icon" id="btnDeshacer" title="Deshacer" disabled><i class="fas fa-undo"></i></button>
       <div class="separador-vertical"></div>
       <button class="btn-icon" id="btnRehacer" title="Rehacer" disabled><i class="fas fa-redo"></i></button>
       <div class="separador-vertical"></div>
+    <button class="btn-icon" id="btnToggleBarraSuperior" title="Contraer / expandir menú"><i class="fas fa-chevron-left"></i></button>
+    <div class="separador-vertical" id="separadorToggle"></div>
+    <div class="iconos-barra-superior" id="iconosBarraSuperior">
+      
       <button class="btn-icon" id="btnLapizTemporal" title="Lápiz temporal (anotación rápida, 4px)"><i class="fas fa-pen-nib"></i></button>
       <button class="btn-icon" id="btnBorrarTemporal" title="Borrar anotaciones del lápiz temporal"><i class="fas fa-trash"></i></button>
       <div class="separador-vertical"></div>
