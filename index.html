@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Pizarra JoB</title>
-
-  <!-- ===== PWA: manifest, ícono y color de tema ===== -->
+  <title>Pizarra JoB · Integración completa</title>
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#1a2634">
   <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
@@ -13,780 +11,267 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pizarrón JB">
-
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
-    /* ===== ESTILOS COMPLETOS ===== */
+    /* ===== ESTILOS COMPLETOS (igual que antes) ===== */
     * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
-    html, body {
-      height: 100%;
-      overflow: hidden; /* La pantalla se ajusta por escala: nunca hacen falta deslizadores del sistema */
-    }
-    body {
-      background: #f0f2f5;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: 'Inter', sans-serif;
-      touch-action: none;
-    }
-    .pizarra-wrapper {
-      background: #ffffff;
-      border-radius: 28px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.05);
-      padding: 12px;
-      display: inline-block;
-      position: relative;
-      transform-origin: center center;
-      transition: transform 0.15s ease;
-    }
-    .barra-superior {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,0.9);
-      backdrop-filter: blur(8px);
-      border-radius: 40px;
-      padding: 6px 14px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-      border: 1px solid rgba(255,255,255,0.5);
-      position: absolute;
-      top: 18px;
-      left: 18px;
-      z-index: 20;
-      pointer-events: auto;
-    }
-    .iconos-barra-superior {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      overflow: hidden;
-      max-width: 900px;
-      opacity: 1;
-      transition: max-width 0.3s ease, opacity 0.2s ease, margin 0.3s ease;
-    }
-    .iconos-barra-superior.contraida {
-      max-width: 0;
-      opacity: 0;
-      pointer-events: none;
-    }
+    html, body { height: 100%; overflow: hidden; }
+    body { background: #f0f2f5; display: flex; justify-content: center; align-items: center; font-family: 'Inter', sans-serif; touch-action: none; }
+    .pizarra-wrapper { background: #ffffff; border-radius: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.05); padding: 12px; display: inline-block; position: relative; transform-origin: center center; transition: transform 0.15s ease; }
+    .barra-superior { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border-radius: 40px; padding: 6px 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,0.5); position: absolute; top: 18px; left: 18px; z-index: 20; pointer-events: auto; }
+    .iconos-barra-superior { display: flex; align-items: center; gap: 8px; overflow: hidden; max-width: 900px; opacity: 1; transition: max-width 0.3s ease, opacity 0.2s ease, margin 0.3s ease; }
+    .iconos-barra-superior.contraida { max-width:0; opacity:0; pointer-events:none; }
     #btnToggleBarraSuperior i { transition: transform 0.3s ease; }
     #btnToggleBarraSuperior.contraido i { transform: rotate(180deg); }
-    .barra-superior .btn-icon {
-      width: 32px;
-      height: 32px;
-      border: none;
-      background: transparent;
-      border-radius: 40px;
-      color: #3a3f4b;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      touch-action: manipulation;
-    }
+    .barra-superior .btn-icon { width: 32px; height: 32px; border: none; background: transparent; border-radius: 40px; color: #3a3f4b; font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; touch-action: manipulation; }
     .barra-superior .btn-icon:hover { background: rgba(0,0,0,0.06); transform: scale(1.05); }
     .barra-superior .btn-icon:active { transform: scale(0.92); }
-    .barra-superior .btn-icon.activo {
-      background: #d0d9e8;
-      color: #1a2634;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .barra-superior .btn-icon:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-    /* ===== Interruptor (mostrar/ocultar fondo de diapositivas importadas) ===== */
-    .interruptor {
-      display: inline-flex;
-      align-items: center;
-      cursor: pointer;
-      margin: 0 2px;
-    }
+    .barra-superior .btn-icon.activo { background: #d0d9e8; color: #1a2634; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+    .barra-superior .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+    .interruptor { display: inline-flex; align-items: center; cursor: pointer; margin: 0 2px; }
     .interruptor input { display: none; }
-    .interruptor-riel {
-      width: 34px;
-      height: 20px;
-      background: #cfd6e0;
-      border-radius: 20px;
-      position: relative;
-      transition: background 0.2s ease;
-      flex-shrink: 0;
-    }
-    .interruptor-bola {
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 16px;
-      height: 16px;
-      background: #ffffff;
-      border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-      transition: transform 0.2s ease;
-    }
-    .interruptor input:checked + .interruptor-riel {
-      background: #2563eb;
-    }
-    .interruptor input:checked + .interruptor-riel .interruptor-bola {
-      transform: translateX(14px);
-    }
-    .interruptor.deshabilitado {
-      opacity: 0.4;
-      pointer-events: none;
-    }
-    /* ===== Botón de activación (candado) ===== */
-    #btnActivacion.activo {
-      background: #eafaf0;
-      color: #16a34a;
-    }
-    /* ===== Modal de activación ===== */
-    .modal-fondo {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 32, 0.55);
-      backdrop-filter: blur(3px);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
+    .interruptor-riel { width: 34px; height: 20px; background: #cfd6e0; border-radius: 20px; position: relative; transition: background 0.2s ease; flex-shrink: 0; }
+    .interruptor-bola { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #ffffff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 0.2s ease; }
+    .interruptor input:checked + .interruptor-riel { background: #2563eb; }
+    .interruptor input:checked + .interruptor-riel .interruptor-bola { transform: translateX(14px); }
+    .interruptor.deshabilitado { opacity: 0.4; pointer-events: none; }
+    #btnActivacion.activo { background: #eafaf0; color: #16a34a; }
+    .modal-fondo { display: none; position: fixed; inset: 0; background: rgba(15,23,32,0.55); backdrop-filter: blur(3px); z-index: 1000; align-items: center; justify-content: center; }
     .modal-fondo.visible { display: flex; }
-    .modal-activacion {
-      background: #ffffff;
-      border-radius: 22px;
-      padding: 30px 32px;
-      width: min(90vw, 380px);
-      text-align: center;
-      box-shadow: 0 24px 60px rgba(0,0,0,0.3);
-    }
-    .modal-icono {
-      width: 52px; height: 52px;
-      border-radius: 50%;
-      background: #eef1f5;
-      color: #1a2634;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
-      margin: 0 auto 14px;
-    }
-    .modal-activacion h3 {
-      font-size: 1.15rem;
-      color: #1a2634;
-      margin-bottom: 8px;
-    }
-    .modal-activacion p {
-      font-size: 0.88rem;
-      color: #5a6a7a;
-      margin-bottom: 18px;
-      line-height: 1.5;
-    }
-    .campos-activacion {
-      display: flex;
-      gap: 12px;
-    }
-    .campo-activacion {
-      flex: 1;
-      text-align: left;
-    }
-    .campo-activacion label {
-      display: block;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: #8a96a8;
-      margin-bottom: 6px;
-    }
-    .campo-activacion input {
-      width: 100%;
-      font-size: 1.25rem;
-      letter-spacing: 4px;
-      text-align: center;
-      text-transform: uppercase;
-      padding: 12px 6px;
-      border: 2px solid #e2e7ee;
-      border-radius: 12px;
-      font-family: 'Inter', sans-serif;
-      font-weight: 700;
-      color: #1a2634;
-      outline: none;
-      transition: border-color 0.15s ease;
-    }
+    .modal-activacion { background: #ffffff; border-radius: 22px; padding: 30px 32px; width: min(90vw, 380px); text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,0.3); }
+    .modal-icono { width: 52px; height: 52px; border-radius: 50%; background: #eef1f5; color: #1a2634; display: flex; align-items: center; justify-content: center; font-size: 20px; margin: 0 auto 14px; }
+    .modal-activacion h3 { font-size: 1.15rem; color: #1a2634; margin-bottom: 8px; }
+    .modal-activacion p { font-size: 0.88rem; color: #5a6a7a; margin-bottom: 18px; line-height: 1.5; }
+    .campos-activacion { display: flex; gap: 12px; }
+    .campo-activacion { flex: 1; text-align: left; }
+    .campo-activacion label { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #8a96a8; margin-bottom: 6px; }
+    .campo-activacion input { width: 100%; font-size: 1.25rem; letter-spacing: 4px; text-align: center; text-transform: uppercase; padding: 12px 6px; border: 2px solid #e2e7ee; border-radius: 12px; font-family: 'Inter', sans-serif; font-weight: 700; color: #1a2634; outline: none; transition: border-color 0.15s ease; }
     .campo-activacion input:focus { border-color: #2563eb; }
-    .modal-mensaje {
-      min-height: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-top: 10px;
-    }
+    .modal-mensaje { min-height: 20px; font-size: 0.85rem; font-weight: 600; margin-top: 10px; }
     .modal-mensaje.error { color: #dc2626; }
     .modal-mensaje.exito { color: #16a34a; }
-    .modal-botones {
-      display: flex;
-      gap: 10px;
-      margin-top: 18px;
-    }
-    .btn-modal {
-      flex: 1;
-      padding: 11px;
-      border-radius: 12px;
-      border: none;
-      font-weight: 700;
-      font-size: 0.9rem;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      transition: all 0.15s ease;
-    }
+    .modal-botones { display: flex; gap: 10px; margin-top: 18px; }
+    .btn-modal { flex: 1; padding: 11px; border-radius: 12px; border: none; font-weight: 700; font-size: 0.9rem; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s ease; }
     .btn-modal-secundario { background: #eef1f5; color: #5a6a7a; }
     .btn-modal-secundario:hover { background: #e2e7ee; }
     .btn-modal-primario { background: #1a2634; color: #ffffff; }
     .btn-modal-primario:hover { background: #223349; }
-/* ===== separador 1 ===== 
- .barra-superior .separador-vertical {
-      width: 1px;
-      height: 24px;
-      background: #d0d7e2;
-      margin: 0 2px;
-    }
-*/
-
-   
-    .pizarra-container {
-      position: relative;
-      width: 1200px;
-      height: 700px;
-      border-radius: 20px;
-      overflow: hidden;
-      background: #fafafa;
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.04);
-      touch-action: none;
-      margin-top: 10px;
-    }
-    /* ===== LUPA (efecto de aumento) ===== */
-    .lupa-overlay {
-      position: absolute;
-      border-radius: 50%;
-      border: 3px solid rgba(255,255,255,0.9);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.12);
-      pointer-events: none;
-      overflow: hidden;
-      z-index: 50;
-      display: none;
-    }
-    .lupa-overlay canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* ===== BARRA DE PESTAÑAS (Cuaderno multi-página) ===== */
-    .barra-pestanas {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 10px;
-      width: 1200px;     /* igual al ancho real del pizarrón: nunca se extiende más allá */
-      max-width: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding: 2px 4px;
-      scrollbar-width: thin;
-    }
+    .pizarra-container { position: relative; width: 1200px; height: 700px; border-radius: 20px; overflow: hidden; background: #fafafa; box-shadow: inset 0 2px 8px rgba(0,0,0,0.04); touch-action: none; margin-top: 10px; }
+    .lupa-overlay { position: absolute; border-radius: 50%; border: 3px solid rgba(255,255,255,0.9); box-shadow: 0 6px 20px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(0,0,0,0.12); pointer-events: none; overflow: hidden; z-index: 50; display: none; }
+    .lupa-overlay canvas { width: 100%; height: 100%; display: block; }
+    .barra-pestanas { display: flex; align-items: center; gap: 6px; margin-top: 10px; width: 1200px; max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 2px 4px; scrollbar-width: thin; }
     .barra-pestanas::-webkit-scrollbar { height: 6px; }
     .barra-pestanas::-webkit-scrollbar-thumb { background: #d0d9e8; border-radius: 10px; }
     .barra-pestanas::-webkit-scrollbar-track { background: transparent; }
-    .pestana {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px 7px 14px;
-      border-radius: 14px;
-      background: #eef1f5;
-      color: #5a6a7a;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-      flex-shrink: 0;
-      user-select: none;
-    }
+    .pestana { display: flex; align-items: center; gap: 8px; padding: 7px 10px 7px 14px; border-radius: 14px; background: #eef1f5; color: #5a6a7a; font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; flex-shrink: 0; user-select: none; }
     .pestana:hover { background: #e2e7ee; }
-    .pestana.activa {
-      background: #1a2634;
-      color: #ffffff;
-      box-shadow: 0 3px 10px rgba(26,38,52,0.25);
-    }
-    .pestana .cerrar-pestana {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      opacity: 0.55;
-      font-size: 0.75rem;
-      line-height: 1;
-    }
+    .pestana.activa { background: #1a2634; color: #ffffff; box-shadow: 0 3px 10px rgba(26,38,52,0.25); }
+    .pestana .cerrar-pestana { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; opacity: 0.55; font-size: 0.75rem; line-height: 1; }
     .pestana .cerrar-pestana:hover { opacity: 1; background: rgba(0,0,0,0.12); }
     .pestana.activa .cerrar-pestana:hover { background: rgba(255,255,255,0.22); }
-    .btn-nueva-pestana {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      background: #eef1f5;
-      color: #5a6a7a;
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: all 0.15s ease;
-    }
+    .btn-nueva-pestana { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: #eef1f5; color: #5a6a7a; cursor: pointer; flex-shrink: 0; transition: all 0.15s ease; }
     .btn-nueva-pestana:hover { background: #2563eb; color: #ffffff; transform: scale(1.08); }
-    .pizarra-viewport {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      transform-origin: 0 0;
-      transition: transform 0.1s ease-out;
-      will-change: transform;
-    }
-    .pizarra-viewport canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      border-radius: 20px;
-      touch-action: none;
-      pointer-events: none;
-    }
-    #canvasFondo {
-      background: transparent;
-      z-index: 0;
-      pointer-events: none;
-    }
-    #canvasImagenFondo {
-      background: transparent;
-      z-index: 1;
-      pointer-events: none;
-    }
-    #canvasPrincipal {
-      background: transparent;
-      z-index: 2;
-      pointer-events: auto;
-    }
-    #canvasTemporal {
-      background: transparent;
-      z-index: 3;
-      pointer-events: none;
-    }
-    #canvasGrid {
-      background: transparent;
-      z-index: 4;
-      pointer-events: none;
-      opacity: 0.5;
-      display: none;
-    }
-    #canvasMarcador {
-      background: transparent;
-      z-index: 5;
-      pointer-events: none;
-      display: none;
-    }
-    #marcoTablero {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 1200px;
-      height: 700px;
-      border: 3px solid #000000;
-      border-radius: 20px;
-      box-sizing: border-box;
-      pointer-events: none;
-      z-index: 6;
-    }
-    .fila-pizarron {
-      display: flex;
-      flex-direction: row-reverse;
-      align-items: center;
-      gap: 14px;
-    }
-    .barra-lateral {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      background: rgba(255,255,255,0.85);
-      backdrop-filter: blur(8px);
-      border-radius: 28px;
-      padding: 10px 8px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-      border: 1px solid rgba(255,255,255,0.5);
-      touch-action: none;
-      width: 48px;
-      flex-shrink: 0;
-    }
-    .barra-lateral .btn-icon {
-      width: 34px;
-      height: 34px;
-      border: none;
-      background: transparent;
-      border-radius: 40px;
-      color: #3a3f4b;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      touch-action: manipulation;
-      flex-shrink: 0;
-    }
+    .pizarra-viewport { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform-origin: 0 0; transition: transform 0.1s ease-out; will-change: transform; }
+    .pizarra-viewport canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 20px; touch-action: none; pointer-events: none; }
+    #canvasFondo { background: transparent; z-index: 0; pointer-events: none; }
+    #canvasImagenFondo { background: transparent; z-index: 1; pointer-events: none; }
+    #canvasPrincipal { background: transparent; z-index: 2; pointer-events: auto; }
+    #canvasTemporal { background: transparent; z-index: 3; pointer-events: none; }
+    #canvasGrid { background: transparent; z-index: 4; pointer-events: none; opacity: 0.5; display: none; }
+    #canvasMarcador { background: transparent; z-index: 5; pointer-events: none; display: none; }
+    #marcoTablero { position: absolute; top: 0; left: 0; width: 1200px; height: 700px; border: 3px solid #000000; border-radius: 20px; box-sizing: border-box; pointer-events: none; z-index: 6; }
+    .fila-pizarron { display: flex; flex-direction: row-reverse; align-items: center; gap: 14px; }
+    .barra-lateral { display: flex; flex-direction: column; align-items: center; gap: 6px; background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); border-radius: 28px; padding: 10px 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); border: 1px solid rgba(255,255,255,0.5); touch-action: none; width: 48px; flex-shrink: 0; }
+    .barra-lateral .btn-icon { width: 34px; height: 34px; border: none; background: transparent; border-radius: 40px; color: #3a3f4b; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; touch-action: manipulation; flex-shrink: 0; }
     .barra-lateral .btn-icon:hover { background: rgba(0,0,0,0.06); transform: scale(1.02); }
     .barra-lateral .btn-icon:active { transform: scale(0.92); }
-    .barra-lateral .btn-icon.activo {
-      background: #d0d9e8;
-      color: #1a2634;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .barra-lateral .separador {
-      width: 26px;
-      height: 1px;
-      background: #d0d7e2;
-      margin: 4px 0;
-      flex-shrink: 0;
-    }
-    .grupo-herramientas {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      width: 100%;
-    }
-    .grupo-herramientas .toggle-grupo {
-      background: transparent;
-      border: none;
-      color: #6a7a8a;
-      font-size: 12px;
-      cursor: pointer;
-      touch-action: manipulation;
-      padding: 2px 0;
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 2px;
-    }
+    .barra-lateral .btn-icon.activo { background: #d0d9e8; color: #1a2634; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+    .barra-lateral .separador { width: 26px; height: 1px; background: #d0d7e2; margin: 4px 0; flex-shrink: 0; }
+    .grupo-herramientas { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+    .grupo-herramientas .toggle-grupo { background: transparent; border: none; color: #6a7a8a; font-size: 12px; cursor: pointer; touch-action: manipulation; padding: 2px 0; width: 100%; display: flex; justify-content: center; align-items: center; gap: 2px; }
     .grupo-herramientas .toggle-grupo:hover { color: #1a2634; }
     .grupo-herramientas.contraido .toggle-grupo i:first-child { transform: rotate(-90deg); }
     .grupo-herramientas.contraido .iconos-grupo { display: none; }
-    .grupo-herramientas .iconos-grupo {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      width: 100%;
-    }
-    .floating-panel {
-      display: none;
-      position: fixed;
-      background: rgba(255,255,255,0.96);
-      backdrop-filter: blur(8px);
-      border-radius: 16px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.15);
-      padding: 12px;
-      border: 1px solid rgba(255,255,255,0.5);
-      min-width: 140px;
-      z-index: 999;
-      flex-direction: column;
-      gap: 8px;
-      touch-action: auto;
-      pointer-events: auto;
-    }
+    .grupo-herramientas .iconos-grupo { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+    .floating-panel { display: none; position: fixed; background: rgba(255,255,255,0.96); backdrop-filter: blur(8px); border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.15); padding: 12px; border: 1px solid rgba(255,255,255,0.5); min-width: 140px; z-index: 999; flex-direction: column; gap: 8px; touch-action: auto; pointer-events: auto; }
     .floating-panel.visible { display: flex; }
-    .floating-panel .grupo-colores {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .floating-panel .color-swatch {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      cursor: pointer;
-      transition: 0.2s;
-      touch-action: manipulation;
-    }
+    .floating-panel .grupo-colores { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .floating-panel .color-swatch { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: 0.2s; touch-action: manipulation; }
     .floating-panel .color-swatch:hover { transform: scale(1.15); }
-    .floating-panel .color-swatch.seleccionado {
-      border-color: #1a2634;
-      box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1a2634;
-    }
-    .floating-panel .grosor-group {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-    }
-    .floating-panel .grosor-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      border: 2px solid #d0d7e2;
-      background: transparent;
-      color: #1a2634;
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: 0.15s;
-      touch-action: manipulation;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+    .floating-panel .color-swatch.seleccionado { border-color: #1a2634; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1a2634; }
+    .floating-panel .grosor-group { display: flex; gap: 8px; justify-content: center; }
+    .floating-panel .grosor-btn { width: 36px; height: 36px; border-radius: 8px; border: 2px solid #d0d7e2; background: transparent; color: #1a2634; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: 0.15s; touch-action: manipulation; display: flex; align-items: center; justify-content: center; }
     .floating-panel .grosor-btn:hover { background: #eef2f7; }
-    .floating-panel .grosor-btn.seleccionado {
-      border-color: #1a2634;
-      background: #d0d9e8;
-    }
-    .btn-cp-accion {
-      width: 34px;
-      height: 34px;
-      font-size: 0.85rem;
-    }
-    #btnCopiarCP.modo-copiar {
-      background: #2d8f4a !important;
-      color: #fff !important;
-      border-color: #1a5a2a !important;
-      box-shadow: 0 0 0 2px rgba(45,143,74,0.5) !important;
-    }
-    #btnCortarCP.modo-cortar {
-      background: #c2410c !important;
-      color: #fff !important;
-      border-color: #8a2e08 !important;
-      box-shadow: 0 0 0 2px rgba(194,65,12,0.5) !important;
-    }
-    .firma {
-      position: absolute;
-      bottom: 12px;
-      right: 20px;
-      z-index: 20;
-      font-size: 13px;
-      color: #8a96a8;
-      background: rgba(255,255,255,0.7);
-      backdrop-filter: blur(4px);
-      padding: 4px 14px;
-      border-radius: 30px;
-      border: 1px solid rgba(255,255,255,0.5);
-      pointer-events: none;
-    }
-    /* El escalado ahora es dinámico (ver ProcesoAjustarPantalla en el script),
-       por eso ya no se usan media queries fijos aquí. */
-
-    /* ===== ESTILO PARA INDICADOR DE ZOOM ===== */
- #indicadorZoom {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #3a3f4b;
-  text-align: center;
-  padding: 4px 0;
-  width: 100%;
-  background: rgba(0,0,0,0.04);
-  border-radius: 12px;
-  user-select: none;
-}
+    .floating-panel .grosor-btn.seleccionado { border-color: #1a2634; background: #d0d9e8; }
+    .btn-cp-accion { width: 34px; height: 34px; font-size: 0.85rem; }
+    #btnCopiarCP.modo-copiar { background: #2d8f4a !important; color: #fff !important; border-color: #1a5a2a !important; box-shadow: 0 0 0 2px rgba(45,143,74,0.5) !important; }
+    #btnCortarCP.modo-cortar { background: #c2410c !important; color: #fff !important; border-color: #8a2e08 !important; box-shadow: 0 0 0 2px rgba(194,65,12,0.5) !important; }
+    .firma { position: absolute; bottom: 12px; right: 20px; z-index: 20; font-size: 13px; color: #8a96a8; background: rgba(255,255,255,0.7); backdrop-filter: blur(4px); padding: 4px 14px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.5); pointer-events: none; }
+    #indicadorZoom { font-size: 0.75rem; font-weight: 600; color: #3a3f4b; text-align: center; padding: 4px 0; width: 100%; background: rgba(0,0,0,0.04); border-radius: 12px; user-select: none; }
   </style>
 </head>
 <body>
 <div class="pizarra-wrapper">
 
+  <!-- ===== ESTRUCTURA HTML ===== -->
   <div class="fila-pizarron">
-  <!-- BARRA LATERAL: fuera del recuadro del pizarrón, pero a su lado -->
-  <div class="barra-lateral" id="barraLateral">
-    <!-- GRUPO 1: Dibujo -->
-    <div class="grupo-herramientas" id="grupo1">
-      <button class="toggle-grupo" id="toggleGrupo1"><i class="fas fa-chevron-down"></i> <i class="fas fa-paint-brush" style="font-size:12px;"></i></button>
-      <div class="iconos-grupo">
-        <button class="btn-icon" id="btnLapiz" data-herramienta="lapiz"><i class="fas fa-pencil-alt"></i></button>
-        <button class="btn-icon" id="btnResaltador" data-herramienta="resaltador"><i class="fas fa-highlighter"></i></button>
-        <button class="btn-icon" id="btnGoma" data-herramienta="goma"><i class="fas fa-eraser"></i></button>
-        <button class="btn-icon" id="btnLinea" data-herramienta="linea"><i class="fas fa-minus"></i></button>
-        <button class="btn-icon" id="btnRectangulo" data-herramienta="rectangulo"><i class="fas fa-border-all"></i></button>
-        <button class="btn-icon" id="btnCP" data-herramienta="cp" title="Selección: mover, copiar, pegar, eliminar"><i class="fas fa-vector-square"></i></button>
+    <!-- BARRA LATERAL -->
+    <div class="barra-lateral" id="barraLateral">
+      <div class="grupo-herramientas" id="grupo1">
+        <button class="toggle-grupo" id="toggleGrupo1"><i class="fas fa-chevron-down"></i> <i class="fas fa-paint-brush" style="font-size:12px;"></i></button>
+        <div class="iconos-grupo">
+          <button class="btn-icon" id="btnLapiz" data-herramienta="lapiz"><i class="fas fa-pencil-alt"></i></button>
+          <button class="btn-icon" id="btnResaltador" data-herramienta="resaltador"><i class="fas fa-highlighter"></i></button>
+          <button class="btn-icon" id="btnGoma" data-herramienta="goma"><i class="fas fa-eraser"></i></button>
+          <button class="btn-icon" id="btnLinea" data-herramienta="linea"><i class="fas fa-minus"></i></button>
+          <button class="btn-icon" id="btnRectangulo" data-herramienta="rectangulo"><i class="fas fa-border-all"></i></button>
+          <button class="btn-icon" id="btnCP" data-herramienta="cp" title="Selección: mover, copiar, pegar, eliminar"><i class="fas fa-vector-square"></i></button>
+        </div>
       </div>
-    </div>
-    <div class="separador"></div>
-    <!-- GRUPO 2: Configuración -->
-    <div class="grupo-herramientas" id="grupo2">
-      <button class="toggle-grupo" id="toggleGrupo2"><i class="fas fa-chevron-down"></i> <i class="fas fa-cog" style="font-size:12px;"></i></button>
-      <div class="iconos-grupo">
-        <button class="btn-icon" id="btnFondo" data-herramienta="fondo"><i class="fas fa-palette"></i></button>
-        <button class="btn-icon" id="btnGrid" data-herramienta="grid"><i class="fas fa-th"></i></button>
-        <button class="btn-icon" id="btnMover" data-herramienta="mover"><i class="fas fa-arrows-alt"></i></button>
-        <button class="btn-icon" id="btnZoomIn"><i class="fas fa-plus-circle"></i></button>
-        <button class="btn-icon" id="btnZoomOut"><i class="fas fa-minus-circle"></i></button>
-<span id="indicadorZoom" style="font-size:0.75rem; font-weight:600; color:#3a3f4b; text-align:center; padding:2px 0; width:100%;">100%</span>
-        <button class="btn-icon" id="btnRestablecerVista" title="Restablecer vista al tamaño inicial"><i class="fas fa-compress-arrows-alt"></i></button>
-        <button class="btn-icon" id="btnLupa" data-herramienta="lupa" title="Lupa (radio 2.5cm)"><i class="fas fa-search-plus"></i></button>
-
+      <div class="separador"></div>
+      <div class="grupo-herramientas" id="grupo2">
+        <button class="toggle-grupo" id="toggleGrupo2"><i class="fas fa-chevron-down"></i> <i class="fas fa-cog" style="font-size:12px;"></i></button>
+        <div class="iconos-grupo">
+          <button class="btn-icon" id="btnFondo" data-herramienta="fondo"><i class="fas fa-palette"></i></button>
+          <button class="btn-icon" id="btnGrid" data-herramienta="grid"><i class="fas fa-th"></i></button>
+          <button class="btn-icon" id="btnMover" data-herramienta="mover"><i class="fas fa-arrows-alt"></i></button>
+          <button class="btn-icon" id="btnZoomIn"><i class="fas fa-plus-circle"></i></button>
+          <button class="btn-icon" id="btnZoomOut"><i class="fas fa-minus-circle"></i></button>
+          <span id="indicadorZoom" style="font-size:0.75rem; font-weight:600; color:#3a3f4b; text-align:center; padding:2px 0; width:100%;">100%</span>
+          <button class="btn-icon" id="btnRestablecerVista" title="Restablecer vista al tamaño inicial"><i class="fas fa-compress-arrows-alt"></i></button>
+          <button class="btn-icon" id="btnLupa" data-herramienta="lupa" title="Lupa (radio 2.5cm)"><i class="fas fa-search-plus"></i></button>
+        </div>
       </div>
+      <div class="separador"></div>
+      <button class="btn-icon activo" id="btnNeutro" data-herramienta="neutro" title="Modo neutro (no dibuja nada)"><i class="far fa-circle"></i></button>
     </div>
 
-    <!-- Botones fijos: siempre visibles, fuera de los grupos retráctiles -->
-    <div class="separador"></div>
-    <button class="btn-icon activo" id="btnNeutro" data-herramienta="neutro" title="Modo neutro (no dibuja nada)"><i class="far fa-circle"></i></button>
-  </div>
-  <!-- BARRA SUPERIOR -->
-  <div class="barra-superior" id="barraSuperior">
-    <button class="btn-icon" id="btnActivacion" title="Activar funciones (Importar PDF / Instalar app)"><i class="fas fa-lock"></i></button>
-    <div class="separador-vertical"></div>
-<button class="btn-icon" id="btnDeshacer" title="Deshacer" disabled><i class="fas fa-undo"></i></button>
+    <!-- BARRA SUPERIOR -->
+    <div class="barra-superior" id="barraSuperior">
+      <button class="btn-icon" id="btnActivacion" title="Activar funciones (Importar PDF / Instalar app)"><i class="fas fa-lock"></i></button>
+      <div class="separador-vertical"></div>
+      <button class="btn-icon" id="btnDeshacer" title="Deshacer" disabled><i class="fas fa-undo"></i></button>
       <div class="separador-vertical"></div>
       <button class="btn-icon" id="btnRehacer" title="Rehacer" disabled><i class="fas fa-redo"></i></button>
       <div class="separador-vertical"></div>
-    <button class="btn-icon" id="btnToggleBarraSuperior" title="Contraer / expandir menú"><i class="fas fa-chevron-left"></i></button>
-    <div class="separador-vertical" id="separadorToggle"></div>
-    <div class="iconos-barra-superior" id="iconosBarraSuperior">
-      
-      <button class="btn-icon" id="btnLapizTemporal" title="Lápiz temporal (anotación rápida, 4px)"><i class="fas fa-pen-nib"></i></button>
-      <button class="btn-icon" id="btnBorrarTemporal" title="Borrar anotaciones del lápiz temporal"><i class="fas fa-trash"></i></button>
-      <div class="separador-vertical"></div>
-      <button class="btn-icon" id="btnImprimir" title="Imprimir pizarra"><i class="fas fa-print"></i></button>
-      <div class="separador-vertical"></div>
-      <button class="btn-icon" id="btnGuardarCuaderno" title="Guardar cuaderno (.job)"><i class="fas fa-save"></i></button>
-      <button class="btn-icon" id="btnAbrirCuaderno" title="Abrir cuaderno (.job)"><i class="fas fa-folder-open"></i></button>
-      <input type="file" id="inputAbrirCuaderno" accept=".job,.pizarra,.json,application/json" style="display:none;">
-      <div class="separador-vertical"></div>
-      <button class="btn-icon" id="btnImportarPDF" title="Importar PDF — requiere activación" disabled><i class="fas fa-file-pdf"></i></button>
-      <input type="file" id="inputImportarPDF" accept=".pdf,application/pdf" style="display:none;">
-      <label class="interruptor deshabilitado" id="interruptorFondoImagen" title="Mostrar u ocultar el fondo importado">
-        <input type="checkbox" id="checkFondoImagen" checked>
-        <span class="interruptor-riel"><span class="interruptor-bola"></span></span>
-      </label>
-      <div class="separador-vertical"></div>
-      <button class="btn-icon" id="btnPantallaCompleta" title="Modo pantalla completa"><i class="fas fa-expand"></i></button>
-      <div class="separador-vertical"></div>
-      <button class="btn-icon" id="btnAbrirPizarron2" title="Abrir Pizarrón 2 (vista para estudiantes)"><i class="fas fa-chalkboard-teacher"></i></button>
-      <button class="btn-icon" id="btnActualizarMarcador" title="Actualizar y mostrar/ocultar el marcador"><i class="fas fa-sync-alt"></i></button>
-      <div class="separador-vertical"></div>
-      <button class="btn-icon" id="btnMoverIzquierda" title="Mover la vista a la izquierda"><i class="fas fa-arrow-left"></i></button>
-      <button class="btn-icon" id="btnMoverDerecha" title="Mover la vista a la derecha"><i class="fas fa-arrow-right"></i></button>
-      <button class="btn-icon" id="btnMoverArriba" title="Mover la vista hacia arriba"><i class="fas fa-arrow-up"></i></button>
-      <button class="btn-icon" id="btnMoverAbajo" title="Mover la vista hacia abajo"><i class="fas fa-arrow-down"></i></button>
-      <div class="separador-vertical" id="separadorInstalar" style="display:none;"></div>
-      <button class="btn-icon" id="btnInstalarApp" title="Instalar como aplicación" style="display:none;"><i class="fas fa-download"></i></button>
+      <button class="btn-icon" id="btnToggleBarraSuperior" title="Contraer / expandir menú"><i class="fas fa-chevron-left"></i></button>
+      <div class="separador-vertical" id="separadorToggle"></div>
+      <div class="iconos-barra-superior" id="iconosBarraSuperior">
+        <button class="btn-icon" id="btnLapizTemporal" title="Lápiz temporal (anotación rápida, 4px)"><i class="fas fa-pen-nib"></i></button>
+        <button class="btn-icon" id="btnBorrarTemporal" title="Borrar anotaciones del lápiz temporal"><i class="fas fa-trash"></i></button>
+        <div class="separador-vertical"></div>
+        <button class="btn-icon" id="btnImprimir" title="Imprimir pizarra"><i class="fas fa-print"></i></button>
+        <div class="separador-vertical"></div>
+        <button class="btn-icon" id="btnGuardarCuaderno" title="Guardar cuaderno (.job)"><i class="fas fa-save"></i></button>
+        <button class="btn-icon" id="btnAbrirCuaderno" title="Abrir cuaderno (.job)"><i class="fas fa-folder-open"></i></button>
+        <input type="file" id="inputAbrirCuaderno" accept=".job,.pizarra,.json,application/json" style="display:none;">
+        <div class="separador-vertical"></div>
+        <button class="btn-icon" id="btnImportarPDF" title="Importar PDF — requiere activación" disabled><i class="fas fa-file-pdf"></i></button>
+        <input type="file" id="inputImportarPDF" accept=".pdf,application/pdf" style="display:none;">
+        <label class="interruptor deshabilitado" id="interruptorFondoImagen" title="Mostrar u ocultar el fondo importado">
+          <input type="checkbox" id="checkFondoImagen" checked>
+          <span class="interruptor-riel"><span class="interruptor-bola"></span></span>
+        </label>
+        <div class="separador-vertical"></div>
+        <button class="btn-icon" id="btnPantallaCompleta" title="Modo pantalla completa"><i class="fas fa-expand"></i></button>
+        <div class="separador-vertical"></div>
+        <button class="btn-icon" id="btnAbrirPizarron2" title="Abrir Pizarrón 2 (vista para estudiantes)"><i class="fas fa-chalkboard-teacher"></i></button>
+        <button class="btn-icon" id="btnActualizarMarcador" title="Actualizar y mostrar/ocultar el marcador"><i class="fas fa-sync-alt"></i></button>
+        <div class="separador-vertical"></div>
+        <button class="btn-icon" id="btnMoverIzquierda" title="Mover la vista a la izquierda"><i class="fas fa-arrow-left"></i></button>
+        <button class="btn-icon" id="btnMoverDerecha" title="Mover la vista a la derecha"><i class="fas fa-arrow-right"></i></button>
+        <button class="btn-icon" id="btnMoverArriba" title="Mover la vista hacia arriba"><i class="fas fa-arrow-up"></i></button>
+        <button class="btn-icon" id="btnMoverAbajo" title="Mover la vista hacia abajo"><i class="fas fa-arrow-down"></i></button>
+        <div class="separador-vertical" id="separadorInstalar" style="display:none;"></div>
+        <button class="btn-icon" id="btnInstalarApp" title="Instalar como aplicación" style="display:none;"><i class="fas fa-download"></i></button>
+      </div>
+    </div>
 
-         </div>
+    <!-- PIZARRÓN -->
+    <div class="pizarra-container" id="pizarraContainer">
+      <div class="pizarra-viewport" id="viewport">
+        <canvas id="canvasFondo" width="1200" height="700"></canvas>
+        <canvas id="canvasImagenFondo" width="1200" height="700"></canvas>
+        <canvas id="canvasPrincipal" width="1200" height="700"></canvas>
+        <canvas id="canvasTemporal" width="1200" height="700"></canvas>
+        <canvas id="canvasGrid" width="1200" height="700"></canvas>
+        <canvas id="canvasMarcador" width="1200" height="700"></canvas>
+        <div id="marcoTablero"></div>
+      </div>
+      <div class="lupa-overlay" id="lupaOverlay"><canvas id="lupaCanvas"></canvas></div>
+      <!-- PANELES FLOTANTES -->
+      <div class="floating-panel" id="panelLapiz">
+        <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">COLOR</div>
+        <div class="grupo-colores" id="coloresLapiz">
+          <span class="color-swatch seleccionado" style="background:#1a1a1a;" data-color="#1a1a1a"></span>
+          <span class="color-swatch" style="background:#ffffff; border-color:#ccc;" data-color="#ffffff"></span>
+          <span class="color-swatch" style="background:#2563eb;" data-color="#2563eb"></span>
+          <span class="color-swatch" style="background:#dc2626;" data-color="#dc2626"></span>
+          <span class="color-swatch" style="background:#16a34a;" data-color="#16a34a"></span>
+          <span class="color-swatch" style="background:#e67e22;" data-color="#e67e22"></span>
+          <span class="color-swatch" style="background:#9333ea;" data-color="#9333ea"></span>
+        </div>
+        <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em; margin-top:4px;">GROSOR</div>
+        <div class="grosor-group" id="grosorLapiz">
+          <button class="grosor-btn seleccionado" data-size="3">3</button>
+          <button class="grosor-btn" data-size="5">5</button>
+          <button class="grosor-btn" data-size="8">8</button>
+        </div>
+      </div>
+      <div class="floating-panel" id="panelResaltador">
+        <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">COLOR</div>
+        <div class="grupo-colores" id="coloresResaltador">
+          <span class="color-swatch seleccionado" style="background:#FFEB3B;" data-color="#FFEB3B" title="Amarillo"></span>
+          <span class="color-swatch" style="background:#76FF03;" data-color="#76FF03" title="Verde"></span>
+          <span class="color-swatch" style="background:#FF4FA3;" data-color="#FF4FA3" title="Rosa"></span>
+        </div>
+        <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em; margin-top:4px;">GROSOR</div>
+        <div class="grosor-group" id="grosorResaltador">
+          <button class="grosor-btn seleccionado" data-size="15">15</button>
+          <button class="grosor-btn" data-size="30">30</button>
+          <button class="grosor-btn" data-size="45">45</button>
+        </div>
+      </div>
+      <div class="floating-panel" id="panelGoma">
+        <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">GROSOR DE LA GOMA</div>
+        <div class="grosor-group" id="grosorGomaGrupo">
+          <button class="grosor-btn seleccionado" data-size="25" title="Mediano">M</button>
+          <button class="grosor-btn" data-size="40" title="Grueso">G</button>
+          <button class="grosor-btn" data-size="60" title="Muy grueso">MG</button>
+        </div>
+      </div>
+      <div class="floating-panel" id="panelFondo">
+        <div class="grupo-colores" id="coloresFondo">
+          <span class="color-swatch" style="background:#ffffff;" data-color="#ffffff"></span>
+          <span class="color-swatch" style="background:#f0f0f0;" data-color="#f0f0f0"></span>
+          <span class="color-swatch" style="background:#fce4b8;" data-color="#fce4b8"></span>
+          <span class="color-swatch seleccionado" style="background:#d9e8f5;" data-color="#d9e8f5"></span>
+          <span class="color-swatch" style="background:#c8e6c9;" data-color="#c8e6c9"></span>
+          <span class="color-swatch" style="background:#000000;" data-color="#000000"></span>
+        </div>
+      </div>
+      <div class="floating-panel" id="panelLapizTemporal">
+        <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">LÁPIZ TEMPORAL · 4px</div>
+        <div class="grupo-colores" id="coloresLapizTemporal">
+          <span class="color-swatch seleccionado" style="background:#E34234;" data-color="#E34234" title="Bermellón"></span>
+          <span class="color-swatch" style="background:#3F51B5;" data-color="#3F51B5" title="Azul índigo"></span>
+          <span class="color-swatch" style="background:#01796F;" data-color="#01796F" title="Verde pino"></span>
+        </div>
+      </div>
+      <div class="floating-panel" id="panelSeleccionCP" style="min-width:auto; pointer-events:auto;">
+        <div style="display:flex; gap:6px; justify-content:center;">
+          <button class="btn-icon btn-cp-accion" id="btnCopiarCP" title="Copiar y mover (deja el original)"><i class="fas fa-copy"></i></button>
+          <button class="btn-icon btn-cp-accion" id="btnCortarCP" title="Cortar y mover (quita el original)"><i class="fas fa-cut"></i></button>
+          <button class="btn-icon btn-cp-accion" id="btnPegarCP" title="Confirmar posición" disabled><i class="fas fa-check"></i></button>
+          <button class="btn-icon btn-cp-accion" id="btnEliminarCP" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
+        </div>
+      </div>
+      <div class="firma">https://sites.google.com/view/pizarron-job/inicio</div>
+    </div>
   </div>
-
-  <div class="pizarra-container" id="pizarraContainer">
-    <div class="pizarra-viewport" id="viewport">
-      <canvas id="canvasFondo" width="1200" height="700"></canvas>
-      <canvas id="canvasImagenFondo" width="1200" height="700"></canvas>
-      <canvas id="canvasPrincipal" width="1200" height="700"></canvas>
-      <canvas id="canvasTemporal" width="1200" height="700"></canvas>
-      <canvas id="canvasGrid" width="1200" height="700"></canvas>
-      <canvas id="canvasMarcador" width="1200" height="700"></canvas>
-      <div id="marcoTablero"></div>
-    </div>
-
-    <!-- LUPA (efecto de aumento circular) -->
-    <div class="lupa-overlay" id="lupaOverlay">
-      <canvas id="lupaCanvas"></canvas>
-    </div>
-
-    <!-- PANELES FLOTANTES -->
-    <div class="floating-panel" id="panelLapiz">
-      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">COLOR</div>
-      <div class="grupo-colores" id="coloresLapiz">
-        <span class="color-swatch seleccionado" style="background:#1a1a1a;" data-color="#1a1a1a"></span>
-        <span class="color-swatch" style="background:#ffffff; border-color:#ccc;" data-color="#ffffff"></span>
-        <span class="color-swatch" style="background:#2563eb;" data-color="#2563eb"></span>
-        <span class="color-swatch" style="background:#dc2626;" data-color="#dc2626"></span>
-        <span class="color-swatch" style="background:#16a34a;" data-color="#16a34a"></span>
-        <span class="color-swatch" style="background:#e67e22;" data-color="#e67e22"></span>
-        <span class="color-swatch" style="background:#9333ea;" data-color="#9333ea"></span>
-      </div>
-      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em; margin-top:4px;">GROSOR</div>
-      <div class="grosor-group" id="grosorLapiz">
-        <button class="grosor-btn seleccionado" data-size="3">3</button>
-        <button class="grosor-btn" data-size="5">5</button>
-        <button class="grosor-btn" data-size="8">8</button>
-      </div>
-    </div>
-
-    <div class="floating-panel" id="panelResaltador">
-      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">COLOR</div>
-      <div class="grupo-colores" id="coloresResaltador">
-        <span class="color-swatch seleccionado" style="background:#FFEB3B;" data-color="#FFEB3B" title="Amarillo"></span>
-        <span class="color-swatch" style="background:#76FF03;" data-color="#76FF03" title="Verde"></span>
-        <span class="color-swatch" style="background:#FF4FA3;" data-color="#FF4FA3" title="Rosa"></span>
-      </div>
-      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em; margin-top:4px;">GROSOR</div>
-      <div class="grosor-group" id="grosorResaltador">
-        <button class="grosor-btn seleccionado" data-size="15">15</button>
-        <button class="grosor-btn" data-size="30">30</button>
-        <button class="grosor-btn" data-size="45">45</button>
-      </div>
-    </div>
-
-    <div class="floating-panel" id="panelGoma">
-      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">GROSOR DE LA GOMA</div>
-      <div class="grosor-group" id="grosorGomaGrupo">
-        <button class="grosor-btn seleccionado" data-size="25" title="Mediano">M</button>
-        <button class="grosor-btn" data-size="40" title="Grueso">G</button>
-        <button class="grosor-btn" data-size="60" title="Muy grueso">MG</button>
-      </div>
-    </div>
-
-    <div class="floating-panel" id="panelFondo">
-      <div class="grupo-colores" id="coloresFondo">
-        <span class="color-swatch" style="background:#ffffff;" data-color="#ffffff"></span>
-        <span class="color-swatch" style="background:#f0f0f0;" data-color="#f0f0f0"></span>
-        <span class="color-swatch" style="background:#fce4b8;" data-color="#fce4b8"></span>
-        <span class="color-swatch seleccionado" style="background:#d9e8f5;" data-color="#d9e8f5"></span>
-        <span class="color-swatch" style="background:#c8e6c9;" data-color="#c8e6c9"></span>
-        <span class="color-swatch" style="background:#000000;" data-color="#000000"></span>
-      </div>
-    </div>
-
-    <!-- PANEL LÁPIZ TEMPORAL -->
-    <div class="floating-panel" id="panelLapizTemporal">
-      <div style="font-size:0.75rem; font-weight:600; color:#5a6a7a; text-align:center; letter-spacing:0.05em;">LÁPIZ TEMPORAL · 4px</div>
-      <div class="grupo-colores" id="coloresLapizTemporal">
-        <span class="color-swatch seleccionado" style="background:#E34234;" data-color="#E34234" title="Bermellón"></span>
-        <span class="color-swatch" style="background:#3F51B5;" data-color="#3F51B5" title="Azul índigo"></span>
-        <span class="color-swatch" style="background:#01796F;" data-color="#01796F" title="Verde pino"></span>
-      </div>
-    </div>
-
-    <!-- PANEL CP (4 puntos) -->
-    <div class="floating-panel" id="panelSeleccionCP" style="min-width:auto; pointer-events:auto;">
-      <div style="display:flex; gap:6px; justify-content:center;">
-        <button class="btn-icon btn-cp-accion" id="btnCopiarCP" title="Copiar y mover (deja el original)"><i class="fas fa-copy"></i></button>
-        <button class="btn-icon btn-cp-accion" id="btnCortarCP" title="Cortar y mover (quita el original)"><i class="fas fa-cut"></i></button>
-        <button class="btn-icon btn-cp-accion" id="btnPegarCP" title="Confirmar posición" disabled><i class="fas fa-check"></i></button>
-        <button class="btn-icon btn-cp-accion" id="btnEliminarCP" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
-      </div>
-    </div>
-
-    <div class="firma">https://sites.google.com/view/pizarron-job/inicio</div>
-  </div>
-  </div>
-
-  <!-- BARRA DE PESTAÑAS (Cuaderno multi-página) -->
-  <div class="barra-pestanas" id="barraPestanas">
-    <!-- Las pestañas se generan dinámicamente por JS: ver módulo GestorCuaderno -->
-  </div>
+  <div class="barra-pestanas" id="barraPestanas"></div>
 </div>
 
 <!-- ===== MODAL DE ACTIVACIÓN ===== -->
@@ -815,68 +300,10 @@
 
 <script>
 // ======================================================================
-// MÓDULO: Activación
-// Gatea "Importar PDF" e "Instalar app" detrás de un código de 10
-// caracteres (5 = usuario/resultado esperado, 5 = contraseña/semilla).
-// El cálculo depende del año actual, por lo que el código expira cada
-// año (es intencional: funciona como una licencia que se renueva).
+// BLOQUE 1 – MODULO ACTIVACIÓN (VALIDACIÓN LOCAL + BACKEND)
 // ======================================================================
 (function ModuloActivacion() {
   const CLAVE_ACTIVACION_LS = 'pizarron_jb_activacion';
-
-  function verificarClave(clave) {
-    if (typeof clave !== 'string' || clave.length !== 10) return 0;
-    const expected = clave.slice(0, 5).toUpperCase();
-    const seed = clave.slice(5, 10).toUpperCase();
-
-    const charToNum = {};
-    const numToChar = {};
-    for (let i = 0; i <= 9; i++) {
-      const ch = String(i);
-      charToNum[ch] = i;
-      numToChar[i] = ch;
-    }
-    for (let i = 0; i < 26; i++) {
-      const ch = String.fromCharCode(65 + i);
-      const val = 10 + i;
-      charToNum[ch] = val;
-      numToChar[val] = ch;
-    }
-
-    try {
-      const v1 = [];
-      for (const ch of seed) {
-        if (!(ch in charToNum)) throw new Error('Carácter inválido');
-        v1.push(charToNum[ch]);
-      }
-      if (v1.length !== 5) return 0;
-
-      const [a, b, c, d, e] = v1;
-      const suma = a + b + c + d + e;
-      const maximo = Math.max(...v1);
-      const minimo = Math.min(...v1);
-      const promedio = Math.floor(suma / 5);
-      const maxMenos1 = maximo - 1;
-      const sumaMod7 = suma % 7;
-      const rango = maximo - minimo;
-      const quinta = 35 - b;
-      const transformado = [promedio, maxMenos1, sumaMod7, rango, quinta];
-
-      const anio = new Date().getFullYear();
-      const anioStr = String(anio).padStart(5, '0');
-      const offset = anioStr.split('').map(Number);
-      const v2 = transformado.map((val, idx) => (val + offset[idx]) % 35);
-
-      let resultado = '';
-      for (const n of v2) {
-        if (!(n in numToChar)) throw new Error('Número fuera de rango');
-        resultado += numToChar[n];
-      }
-      return (resultado === expected) ? 1 : 0;
-    } catch (e) {
-      return 0;
-    }
-  }
 
   const btnActivacion = document.getElementById('btnActivacion');
   const modalFondo = document.getElementById('modalActivacionFondo');
@@ -890,22 +317,46 @@
 
   let activado = false;
 
+  function verificarClave(clave) {
+    if (typeof clave !== 'string' || clave.length !== 10) return 0;
+    const expected = clave.slice(0, 5).toUpperCase();
+    const seed = clave.slice(5, 10).toUpperCase();
+    const charToNum = {};
+    const numToChar = {};
+    for (let i = 0; i <= 9; i++) { charToNum[String(i)] = i; numToChar[i] = String(i); }
+    for (let i = 0; i < 26; i++) { const ch = String.fromCharCode(65 + i); const val = 10 + i; charToNum[ch] = val; numToChar[val] = ch; }
+    try {
+      const v1 = seed.split('').map(ch => { if (!(ch in charToNum)) throw new Error(); return charToNum[ch]; });
+      if (v1.length !== 5) return 0;
+      const [a, b, c, d, e] = v1;
+      const suma = a + b + c + d + e;
+      const maximo = Math.max(...v1);
+      const minimo = Math.min(...v1);
+      const promedio = Math.floor(suma / 5);
+      const maxMenos1 = maximo - 1;
+      const sumaMod7 = suma % 7;
+      const rango = maximo - minimo;
+      const quinta = 35 - b;
+      const transformado = [promedio, maxMenos1, sumaMod7, rango, quinta];
+      const anio = new Date().getFullYear();
+      const anioStr = String(anio).padStart(5, '0');
+      const offset = anioStr.split('').map(Number);
+      const v2 = transformado.map((val, idx) => (val + offset[idx]) % 35);
+      let resultado = '';
+      for (const n of v2) { if (!(n in numToChar)) throw new Error(); resultado += numToChar[n]; }
+      return (resultado === expected) ? 1 : 0;
+    } catch (e) { return 0; }
+  }
+
   function aplicarEstadoActivacion() {
     const btnImportarPDF = document.getElementById('btnImportarPDF');
     const interruptorFondoImagen = document.getElementById('interruptorFondoImagen');
     const checkFondoImagen = document.getElementById('checkFondoImagen');
-
     btnImportarPDF.disabled = !activado;
-    btnImportarPDF.title = activado
-      ? 'Importar PDF (cada página, como fondo de una hoja nueva)'
-      : 'Importar PDF — requiere activación';
     interruptorFondoImagen.classList.toggle('deshabilitado', !activado);
     checkFondoImagen.disabled = !activado;
-
     btnActivacion.querySelector('i').className = activado ? 'fas fa-unlock' : 'fas fa-lock';
-    btnActivacion.title = activado ? 'Funciones activadas' : 'Activar funciones (Importar PDF / Instalar app)';
     btnActivacion.classList.toggle('activo', activado);
-
     if (activado && typeof mostrarBotonInstalarSiCorresponde === 'function') {
       mostrarBotonInstalarSiCorresponde();
     }
@@ -914,18 +365,15 @@
   function cargarEstadoGuardado() {
     try {
       const guardado = JSON.parse(localStorage.getItem(CLAVE_ACTIVACION_LS) || 'null');
-      const anioActual = new Date().getFullYear();
-      if (guardado && guardado.activado && guardado.anio === anioActual) {
+      if (guardado && guardado.activado && guardado.anio === new Date().getFullYear()) {
         activado = true;
       }
-    } catch (e) { /* sin datos previos válidos */ }
+    } catch (e) {}
     aplicarEstadoActivacion();
   }
 
   function guardarEstado() {
-    try {
-      localStorage.setItem(CLAVE_ACTIVACION_LS, JSON.stringify({ activado: true, anio: new Date().getFullYear() }));
-    } catch (e) { /* almacenamiento no disponible */ }
+    try { localStorage.setItem(CLAVE_ACTIVACION_LS, JSON.stringify({ activado: true, anio: new Date().getFullYear() })); } catch (e) {}
   }
 
   function abrirModal() {
@@ -933,13 +381,7 @@
     modalMensaje.className = 'modal-mensaje';
     inputUsuario.value = '';
     inputClave.value = '';
-    if (activado) {
-      modalIcono.className = 'fas fa-unlock';
-      modalTexto.innerHTML = 'Las funciones ya están <strong>activadas</strong> para este año. Puedes ingresar un usuario y clave nuevos si quieres cambiarlos.';
-    } else {
-      modalIcono.className = 'fas fa-lock';
-      modalTexto.innerHTML = 'Ingresa tu <strong>Usuario</strong> y <strong>Clave</strong> (5 caracteres cada uno) para habilitar <strong>Importar PDF</strong> e <strong>Instalar app</strong>.';
-    }
+    modalIcono.className = activado ? 'fas fa-unlock' : 'fas fa-lock';
     modalFondo.classList.add('visible');
     setTimeout(() => inputUsuario.focus(), 50);
   }
@@ -957,17 +399,17 @@
       return;
     }
     const resultado = verificarClave(usuario + clave);
-    if (resultado === 1) {
-      activado = true;
-      guardarEstado();
-      aplicarEstadoActivacion();
-      modalMensaje.textContent = '✅ Datos correctos. Funciones activadas.';
-      modalMensaje.className = 'modal-mensaje exito';
-      setTimeout(cerrarModal, 900);
-    } else {
+    if (resultado !== 1) {
       modalMensaje.textContent = '❌ Usuario o Clave incorrectos.';
       modalMensaje.className = 'modal-mensaje error';
+      return;
     }
+    activado = true;
+    guardarEstado();
+    aplicarEstadoActivacion();
+    modalMensaje.textContent = '✅ Datos correctos. Registrando en la nube...';
+    modalMensaje.className = 'modal-mensaje exito';
+    procesarRegistro(usuario, clave);
   }
 
   btnActivacion.addEventListener('click', abrirModal);
@@ -978,22 +420,120 @@
     campo.addEventListener('keydown', (e) => { if (e.key === 'Enter') procesarVerificacion(); });
     campo.addEventListener('input', () => {
       campo.value = campo.value.toUpperCase();
-      // Salta automáticamente al siguiente campo al completar 5 caracteres
       if (campo.value.length >= 5 && i === 0) inputClave.focus();
     });
   });
 
-  // Se expone para que el resto de módulos (importar PDF, instalar app)
-  // puedan consultar si ya está activado.
   window.estaActivado = () => activado;
-
   cargarEstadoGuardado();
 })();
-</script>
 
-<script>
 // ======================================================================
-// MÓDULO 1 – Pizarra (base estable del Mensaje 21)
+// BLOQUE 2 – INTEGRACIÓN CON BACKEND (GOOGLE APPS SCRIPT)
+// ======================================================================
+const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbxgMk5aLpaxyKXJ4zAXKcPFPDfVz1KxlEB0dc1lhyIJiNL4yrf1nyyeI5hM9wQeuQiVNw/exec';
+
+function procesarRegistro(id, clave) {
+  mostrarMensaje('⏳ Conectando con el servidor...');
+  const payload = { action: 'activar', id: id, email: '', fechaCompra: '' };
+  console.log('📤 Enviando payload:', payload);
+  fetch(URL_BACKEND, {
+    method: 'POST',
+    mode: 'cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => {
+    console.log('📥 Status HTTP:', res.status);
+    if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
+    return res.json();
+  })
+  .then(data => {
+    console.log('📦 Datos recibidos:', data);
+    if (data.error) {
+      mostrarMensaje('❌ Error servidor: ' + data.error);
+      return;
+    }
+    if (data.exito) {
+      localStorage.setItem('pizarron_activado', 'true');
+      localStorage.setItem('pizarron_id', id);
+      mostrarMensaje('✅ ' + data.mensaje);
+      mostrarFuncionesPremium();
+    } else {
+      if (data.mensaje && data.mensaje.toLowerCase().includes('fecha de compra')) {
+        mostrarFormularioRegistro(id);
+      } else {
+        mostrarMensaje('❌ ' + (data.mensaje || 'Error desconocido.'));
+      }
+    }
+  })
+  .catch(error => {
+    console.error('❌ Error en fetch:', error);
+    mostrarMensaje('❌ Error de conexión: ' + error.message);
+  });
+}
+
+function mostrarFormularioRegistro(id) {
+  const email = prompt('Ingrese su correo electrónico (opcional):', '');
+  const fechaCompra = prompt('Ingrese la fecha de compra (ej. 2026-08-16):', '');
+  if (!fechaCompra || fechaCompra.trim() === '') {
+    mostrarMensaje('La fecha de compra es obligatoria.');
+    return;
+  }
+  const payload = { action: 'activar', id: id, email: email || '', fechaCompra: fechaCompra };
+  fetch(URL_BACKEND, {
+    method: 'POST',
+    mode: 'cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.exito) {
+      localStorage.setItem('pizarron_activado', 'true');
+      localStorage.setItem('pizarron_id', id);
+      mostrarMensaje('✅ ' + data.mensaje);
+      mostrarFuncionesPremium();
+    } else {
+      mostrarMensaje('❌ ' + (data.mensaje || 'Error al registrar.'));
+    }
+  })
+  .catch(error => {
+    console.error(error);
+    mostrarMensaje('❌ Error de conexión. Intente nuevamente.');
+  });
+}
+
+function mostrarMensaje(texto) {
+  const el = document.getElementById('modalActivacionMensaje');
+  if (el) {
+    el.textContent = texto;
+    el.className = 'modal-mensaje';
+    if (texto.includes('❌') || texto.includes('Error')) el.classList.add('error');
+    else if (texto.includes('✅') || texto.includes('exito')) el.classList.add('exito');
+  } else alert(texto);
+}
+
+function mostrarFuncionesPremium() {
+  const btnPDF = document.getElementById('btnImportarPDF');
+  const btnInstalar = document.getElementById('btnInstalarApp');
+  if (btnPDF) btnPDF.disabled = false;
+  if (btnInstalar) btnInstalar.style.display = 'inline-flex';
+  const separador = document.getElementById('separadorInstalar');
+  if (separador) separador.style.display = 'block';
+  const btnActivacion = document.getElementById('btnActivacion');
+  if (btnActivacion) {
+    btnActivacion.querySelector('i').className = 'fas fa-unlock';
+    btnActivacion.classList.add('activo');
+  }
+  setTimeout(() => {
+    const modal = document.getElementById('modalActivacionFondo');
+    if (modal) modal.classList.remove('visible');
+  }, 2000);
+}
+
+// ======================================================================
+// BLOQUE 3 – MÓDULO PIZARRA (COMPLETO)
 // ======================================================================
 const Pizarra = (() => {
   const contenedor = document.getElementById('pizarraContainer');
@@ -1028,21 +568,15 @@ const Pizarra = (() => {
   let tamanoRect = 40;
   let fondoColor = '#d9e8f5';
 
-  // ----- HISTORIAL (10 pasos) -----
   const MAX_HIST = 10;
   let history = [];
   let historyIndex = -1;
 
   function guardarEstado() {
     const dataUrl = canvasP.toDataURL();
-    if (historyIndex < history.length - 1) {
-      history = history.slice(0, historyIndex + 1);
-    }
+    if (historyIndex < history.length - 1) history = history.slice(0, historyIndex + 1);
     history.push(dataUrl);
-    if (history.length > MAX_HIST) {
-      history.shift();
-      historyIndex = Math.max(0, historyIndex - 1);
-    }
+    if (history.length > MAX_HIST) { history.shift(); historyIndex = Math.max(0, historyIndex - 1); }
     historyIndex = history.length - 1;
     actualizarBotonesHistorial();
     if (onCambioContenido) onCambioContenido();
@@ -1063,13 +597,8 @@ const Pizarra = (() => {
     img.src = dataUrl;
   }
 
-  function deshacer() {
-    if (historyIndex > 0) restaurarEstado(historyIndex - 1);
-  }
-
-  function rehacer() {
-    if (historyIndex < history.length - 1) restaurarEstado(historyIndex + 1);
-  }
+  function deshacer() { if (historyIndex > 0) restaurarEstado(historyIndex - 1); }
+  function rehacer() { if (historyIndex < history.length - 1) restaurarEstado(historyIndex + 1); }
 
   function actualizarBotonesHistorial() {
     const btnDeshacer = document.getElementById('btnDeshacer');
@@ -1086,8 +615,6 @@ const Pizarra = (() => {
     if (onCambioContenido) onCambioContenido();
   }
 
-  // ----- FIN HISTORIAL -----
-
   let isDrawing = false;
   let lastX = 0, lastY = 0;
   let startX = 0, startY = 0;
@@ -1095,18 +622,14 @@ const Pizarra = (() => {
   let resaltadorColor = '#FFEB3B';
   let resaltadorGrosor = 15;
   const RESALTADOR_OPACIDAD = 0.15;
-
-  // ----- LÁPIZ TEMPORAL (capa efímera, no entra al historial) -----
-  let colorTemporal = '#E34234'; // Bermellón por defecto
+  let colorTemporal = '#E34234';
   const GROSOR_TEMPORAL = 4;
 
   function getCtx() { return capaActiva === 'principal' ? ctxP : ctxT; }
   function getCanvas() { return capaActiva === 'principal' ? canvasP : canvasT; }
   function getColorBorrado() { return capaActiva === 'principal' ? fondoColor : '#ffffff'; }
-
   function limpiarTemporal() { ctxT.clearRect(0, 0, W, H); if (onCambioContenido) onCambioContenido(); }
 
-  // ---- FUNCIONES DE DIBUJO (SIN guardarEstado) ----
   function dibujarPunto(x, y, color, grosor, opacidad) {
     const ctx = getCtx();
     ctx.save();
@@ -1117,7 +640,6 @@ const Pizarra = (() => {
     ctx.fill();
     ctx.restore();
   }
-
   function dibujarLinea(x1, y1, x2, y2, color, grosor, opacidad) {
     const ctx = getCtx();
     ctx.save();
@@ -1132,7 +654,6 @@ const Pizarra = (() => {
     ctx.stroke();
     ctx.restore();
   }
-
   function dibujarRectangulo(x, y, w, h, color, grosor, opacidad) {
     const ctx = getCtx();
     ctx.save();
@@ -1142,7 +663,6 @@ const Pizarra = (() => {
     ctx.strokeRect(x, y, w, h);
     ctx.restore();
   }
-
   function borrarRect(x, y, size) {
     const ctx = getCtx();
     ctx.save();
@@ -1151,76 +671,42 @@ const Pizarra = (() => {
     ctx.restore();
     guardarEstado();
   }
-
   function dibujarGridEnCanvas(ctx) {
     ctx.save();
     ctx.strokeStyle = 'rgba(150,150,150,0.5)';
     ctx.lineWidth = 0.8;
     const step = 40;
-    for (let x = 0; x <= W; x += step) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, H);
-      ctx.stroke();
-    }
-    for (let y = 0; y <= H; y += step) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W, y);
-      ctx.stroke();
-    }
+    for (let x = 0; x <= W; x += step) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y <= H; y += step) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
     ctx.restore();
   }
-
   function toggleGrid() {
     gridVisible = !gridVisible;
-    if (gridVisible) {
-      canvasGrid.style.display = 'block';
-      ctxGrid.clearRect(0, 0, W, H);
-      dibujarGridEnCanvas(ctxGrid);
-    } else {
-      canvasGrid.style.display = 'none';
-      ctxGrid.clearRect(0, 0, W, H);
-    }
+    if (gridVisible) { canvasGrid.style.display = 'block'; ctxGrid.clearRect(0, 0, W, H); dibujarGridEnCanvas(ctxGrid); }
+    else { canvasGrid.style.display = 'none'; ctxGrid.clearRect(0, 0, W, H); }
     return gridVisible;
   }
-
   function setFondo(color) {
     fondoColor = color;
     ctxFondo.save();
     ctxFondo.fillStyle = color;
     ctxFondo.fillRect(0, 0, W, H);
     ctxFondo.restore();
-    // Nota: el fondo vive en su propia capa (canvasFondo), independiente
-    // del dibujo (canvasPrincipal). Por eso ya NO se llama a guardarEstado()
-    // aquí: cambiar el color de fondo no altera ni cubre lo dibujado, y no
-    // debe consumir un paso del historial de deshacer/rehacer del dibujo.
     if (onCambioContenido) onCambioContenido();
   }
-
   function actualizarTransform() {
     viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
     if (onCambioTransform) onCambioTransform();
   }
 
-  // ----- Fondo de imagen importada (PDF), independiente del color de fondo -----
   let tieneFondoImagen = false;
   let fondoImagenVisible = true;
-
   function setFondoImagen(dataUrl, callback) {
     ctxImagenFondo.clearRect(0, 0, W, H);
     tieneFondoImagen = !!dataUrl;
-    if (!dataUrl) {
-      if (onCambioContenido) onCambioContenido();
-      if (callback) callback();
-      return;
-    }
+    if (!dataUrl) { if (onCambioContenido) onCambioContenido(); if (callback) callback(); return; }
     const img = new Image();
-    img.onload = () => {
-      ctxImagenFondo.drawImage(img, 0, 0);
-      if (onCambioContenido) onCambioContenido();
-      if (callback) callback();
-    };
+    img.onload = () => { ctxImagenFondo.drawImage(img, 0, 0); if (onCambioContenido) onCambioContenido(); if (callback) callback(); };
     img.src = dataUrl;
   }
   function mostrarFondoImagen(visible) {
@@ -1231,28 +717,16 @@ const Pizarra = (() => {
   function tieneFondoImagenActivo() { return tieneFondoImagen && fondoImagenVisible; }
   function getCanvasImagenFondo() { return canvasImagenFondo; }
 
-  function zoomIn() {
-    zoom = Math.min(8, zoom * 1.15);
-    actualizarTransform();
-  }
-  function zoomOut() {
-    zoom = Math.max(0.25, zoom / 1.15);
-    actualizarTransform();
-  }
+  function zoomIn() { zoom = Math.min(8, zoom * 1.15); actualizarTransform(); }
+  function zoomOut() { zoom = Math.max(0.25, zoom / 1.15); actualizarTransform(); }
 
   function getCoords(e) {
     const rect = contenedor.getBoundingClientRect();
     const scaleX = W / rect.width;
     const scaleY = H / rect.height;
     let cx, cy;
-    if (e.touches) {
-      cx = e.touches[0].clientX;
-      cy = e.touches[0].clientY;
-      e.preventDefault();
-    } else {
-      cx = e.clientX;
-      cy = e.clientY;
-    }
+    if (e.touches) { cx = e.touches[0].clientX; cy = e.touches[0].clientY; e.preventDefault(); }
+    else { cx = e.clientX; cy = e.clientY; }
     let x = (cx - rect.left) * scaleX;
     let y = (cy - rect.top) * scaleY;
     x = (x - panX) / zoom;
@@ -1260,25 +734,17 @@ const Pizarra = (() => {
     return { x, y };
   }
 
-  // ---- EVENTOS DE PUNTERO ----
   function onPointerDown(e) {
     if (herramientaActiva === 'cp') return;
     const { x, y } = getCoords(e);
     const tool = herramientaActiva;
-
     if (tool === 'mover') {
       isPanning = true;
       const ev = e.touches ? e.touches[0] : e;
-      panStartX = ev.clientX;
-      panStartY = ev.clientY;
+      panStartX = ev.clientX; panStartY = ev.clientY;
       return;
     }
-
-    if (tool === 'borradorRect') {
-      borrarRect(x, y, tamanoRect);
-      return;
-    }
-
+    if (tool === 'borradorRect') { borrarRect(x, y, tamanoRect); return; }
     if (tool === 'linea' || tool === 'rectangulo') {
       isDrawing = true;
       startX = x; startY = y; lastX = x; lastY = y;
@@ -1286,10 +752,8 @@ const Pizarra = (() => {
       ctxT.drawImage(getCanvas(), 0, 0);
       return;
     }
-
     isDrawing = true;
     lastX = x; lastY = y; startX = x; startY = y;
-
     if (tool === 'goma') {
       const ctx = getCtx();
       ctx.save();
@@ -1311,7 +775,6 @@ const Pizarra = (() => {
     if (herramientaActiva === 'cp') return;
     const { x, y } = getCoords(e);
     const tool = herramientaActiva;
-
     if (isPanning) {
       const ev = e.touches ? e.touches[0] : e;
       panX += ev.clientX - panStartX;
@@ -1321,9 +784,7 @@ const Pizarra = (() => {
       actualizarTransform();
       return;
     }
-
     if (!isDrawing) return;
-
     if (tool === 'linea' || tool === 'rectangulo') {
       lastX = x; lastY = y;
       ctxT.clearRect(0, 0, W, H);
@@ -1336,19 +797,11 @@ const Pizarra = (() => {
       ctxT.lineWidth = grosor;
       ctxT.lineCap = 'round';
       ctxT.lineJoin = 'round';
-      if (tool === 'linea') {
-        ctxT.beginPath();
-        ctxT.moveTo(startX, startY);
-        ctxT.lineTo(x, y);
-        ctxT.stroke();
-      } else {
-        const w = x - startX, h = y - startY;
-        ctxT.strokeRect(startX, startY, w, h);
-      }
+      if (tool === 'linea') { ctxT.beginPath(); ctxT.moveTo(startX, startY); ctxT.lineTo(x, y); ctxT.stroke(); }
+      else { const w = x - startX, h = y - startY; ctxT.strokeRect(startX, startY, w, h); }
       ctxT.restore();
       return;
     }
-
     if (tool === 'lapiz' || tool === 'resaltador' || tool === 'goma' || tool === 'lapizTemporal') {
       const ctx = getCtx();
       if (tool === 'goma') {
@@ -1364,19 +817,9 @@ const Pizarra = (() => {
         ctx.restore();
       } else {
         let color, grosor, opacidad;
-        if (tool === 'lapiz') {
-          color = colorActivo;
-          grosor = (capaActiva === 'principal') ? grosorActivo : 3;
-          opacidad = (capaActiva === 'principal') ? opacidadActivo : 1;
-        } else if (tool === 'lapizTemporal') {
-          color = colorTemporal;
-          grosor = GROSOR_TEMPORAL;
-          opacidad = 1;
-        } else {
-          color = resaltadorColor;
-          grosor = resaltadorGrosor;
-          opacidad = RESALTADOR_OPACIDAD;
-        }
+        if (tool === 'lapiz') { color = colorActivo; grosor = (capaActiva === 'principal') ? grosorActivo : 3; opacidad = (capaActiva === 'principal') ? opacidadActivo : 1; }
+        else if (tool === 'lapizTemporal') { color = colorTemporal; grosor = GROSOR_TEMPORAL; opacidad = 1; }
+        else { color = resaltadorColor; grosor = resaltadorGrosor; opacidad = RESALTADOR_OPACIDAD; }
         dibujarLinea(lastX, lastY, x, y, color, grosor, opacidad);
       }
       lastX = x; lastY = y;
@@ -1386,19 +829,9 @@ const Pizarra = (() => {
   function onPointerUp(e) {
     if (herramientaActiva === 'cp') return;
     const tool = herramientaActiva;
-
-    if (isPanning) {
-      isPanning = false;
-      return;
-    }
-
-    if (!isDrawing) {
-      if (tool === 'linea' || tool === 'rectangulo') ctxT.clearRect(0, 0, W, H);
-      return;
-    }
-
+    if (isPanning) { isPanning = false; return; }
+    if (!isDrawing) { if (tool === 'linea' || tool === 'rectangulo') ctxT.clearRect(0, 0, W, H); return; }
     isDrawing = false;
-
     if (tool === 'linea' || tool === 'rectangulo') {
       const ctx = getCtx();
       const grosor = (capaActiva === 'principal') ? grosorActivo : 3;
@@ -1409,22 +842,14 @@ const Pizarra = (() => {
       ctx.lineWidth = grosor;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      if (tool === 'linea') {
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(lastX, lastY);
-        ctx.stroke();
-      } else {
-        const w = lastX - startX, h = lastY - startY;
-        ctx.strokeRect(startX, startY, w, h);
-      }
+      if (tool === 'linea') { ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(lastX, lastY); ctx.stroke(); }
+      else { const w = lastX - startX, h = lastY - startY; ctx.strokeRect(startX, startY, w, h); }
       ctx.restore();
       ctxT.clearRect(0, 0, W, H);
       guardarEstado();
     } else if (tool === 'lapiz' || tool === 'resaltador' || tool === 'goma') {
       guardarEstado();
     } else if (tool === 'lapizTemporal') {
-      // No entra al historial (es efímero), pero sí debe reflejarse en el espejo
       if (onCambioContenido) onCambioContenido();
     }
   }
@@ -1432,14 +857,8 @@ const Pizarra = (() => {
   function addEvent(el, type, handler) {
     el.addEventListener(type, handler);
     if (type === 'mousedown') el.addEventListener('touchstart', handler, { passive: false });
-    if (type === 'mousemove') {
-      window.addEventListener('touchmove', handler, { passive: false });
-      el.addEventListener('touchmove', handler, { passive: false });
-    }
-    if (type === 'mouseup') {
-      window.addEventListener('touchend', handler, { passive: false });
-      el.addEventListener('touchend', handler, { passive: false });
-    }
+    if (type === 'mousemove') { window.addEventListener('touchmove', handler, { passive: false }); el.addEventListener('touchmove', handler, { passive: false }); }
+    if (type === 'mouseup') { window.addEventListener('touchend', handler, { passive: false }); el.addEventListener('touchend', handler, { passive: false }); }
   }
   addEvent(contenedor, 'mousedown', onPointerDown);
   addEvent(window, 'mousemove', onPointerMove);
@@ -1455,19 +874,9 @@ const Pizarra = (() => {
 
   function setResaltadorColor(color) { resaltadorColor = color; }
   function setResaltadorGrosor(grosor) { resaltadorGrosor = grosor; }
-
   function getTransform() { return { panX, panY, zoom }; }
-  function moverVista(dx, dy) {
-    panX += dx;
-    panY += dy;
-    actualizarTransform();
-  }
-  function setTransformCompleta(nuevoZoom, nuevoPanX, nuevoPanY) {
-    zoom = nuevoZoom;
-    panX = nuevoPanX;
-    panY = nuevoPanY;
-    actualizarTransform();
-  }
+  function moverVista(dx, dy) { panX += dx; panY += dy; actualizarTransform(); }
+  function setTransformCompleta(nuevoZoom, nuevoPanX, nuevoPanY) { zoom = nuevoZoom; panX = nuevoPanX; panY = nuevoPanY; actualizarTransform(); }
   function getColorFondo() { return fondoColor; }
   function getCanvasPrincipal() { return canvasP; }
   function getCanvasTemporal() { return canvasT; }
@@ -1475,13 +884,6 @@ const Pizarra = (() => {
   function getCanvasGrid() { return canvasGrid; }
   function getContenedor() { return contenedor; }
   function estaDibujando() { return isDrawing; }
-
-  // ======================================================================
-  // PUNTO DE CENTRO EN EL TABLERO (para el marcador espejo Pizarrón 1 ↔ 2)
-  // Devuelve, en coordenadas del tablero (0..W, 0..H), qué punto del
-  // dibujo está actualmente en el centro visual de la pantalla — es decir,
-  // invierte el pan/zoom aplicando la misma fórmula que getCoords().
-  // ======================================================================
   function getPuntoDeCentroEnTablero() {
     const rect = contenedor.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
@@ -1495,7 +897,6 @@ const Pizarra = (() => {
     return { x, y };
   }
 
-  // ===== Hooks de sincronización (Pizarrón 1 → Pizarrón 2) =====
   let onCambioContenido = null;
   let onCambioTransform = null;
   function setOnCambioContenido(fn) { onCambioContenido = fn; }
@@ -1546,8 +947,7 @@ const Pizarra = (() => {
 })();
 
 // ======================================================================
-// MÓDULO 2 – SelectionManager (selección rectangular – manita)
-// (idéntico al Mensaje 21)
+// BLOQUE 4 – SELECTION MANAGER (MANITA)
 // ======================================================================
 class SelectionManager {
   constructor(opciones) {
@@ -1857,7 +1257,7 @@ class SelectionManager {
 }
 
 // ======================================================================
-// MÓDULO 3 – SelectionManagerCP (copiado de N_0.html)
+// BLOQUE 5 – SELECTION MANAGER CP
 // ======================================================================
 class SelectionManagerCP {
   constructor(opciones) {
@@ -1879,7 +1279,7 @@ class SelectionManagerCP {
 
     this.seleccion = null;
     this.portapapeles = null;
-    this.tipoOperacion = null; // null | 'copiar' | 'cortar'
+    this.tipoOperacion = null;
     this.activo = false;
 
     this.isSelecting = false;
@@ -1937,9 +1337,6 @@ class SelectionManagerCP {
     this.actualizarBotonesPanel();
   }
 
-  // Habilita/deshabilita los botones según el estado: mientras Copiar o
-  // Cortar están "en vuelo" (arrastrando/deformando), solo Pegar responde,
-  // para evitar acciones ambiguas a mitad de la operación.
   actualizarBotonesPanel() {
     const enOperacion = !!this.tipoOperacion;
     [this.btnCopiar, this.btnCortar, this.btnEliminar].forEach(b => { if (b) b.disabled = enOperacion; });
@@ -1949,8 +1346,6 @@ class SelectionManagerCP {
     this.canvasT.style.cursor = enOperacion ? 'move' : '';
   }
 
-  // Captura el contenido de la selección y activa el modo mover/deformar,
-  // sin tocar aún el original (eso se decide recién al pulsar "Pegar").
   _prepararOperacion(tipo) {
     if (!this.seleccion || this.tipoOperacion) return;
     const { x, y, w, h } = this.seleccion;
@@ -2079,13 +1474,11 @@ class SelectionManagerCP {
   _onPointerDown(e) {
     if (!this.activo) return;
     const { x, y } = this._getCoords(e);
-
     if (this.seleccion) {
       const dentroDeSeleccion = (
         x >= this.seleccion.x && x <= this.seleccion.x + this.seleccion.w &&
         y >= this.seleccion.y && y <= this.seleccion.y + this.seleccion.h
       );
-
       if (this.tipoOperacion) {
         const handle = this._getHandleAt(x, y);
         if (handle) {
@@ -2101,10 +1494,8 @@ class SelectionManagerCP {
           this.startY = y;
           return;
         }
-        // Clic afuera con una operación pendiente: se cancela sin tocar el original
         this.limpiarSeleccion();
       } else if (dentroDeSeleccion) {
-        // Seleccionado, pero sin Copiar/Cortar aún: queda fijo, ignora el clic
         return;
       } else {
         this.limpiarSeleccion();
@@ -2119,7 +1510,6 @@ class SelectionManagerCP {
   _onPointerMove(e) {
     if (!this.activo) return;
     const { x, y } = this._getCoords(e);
-
     if (this.isSelecting) {
       const dx = x - this.startX;
       const dy = y - this.startY;
@@ -2128,7 +1518,6 @@ class SelectionManagerCP {
       this.dibujarSeleccion();
       return;
     }
-
     if (this.selectionDrag === 'move') {
       const dx = x - this.startX;
       const dy = y - this.startY;
@@ -2137,7 +1526,6 @@ class SelectionManagerCP {
       this.startY = y;
       return;
     }
-
     if (this.selectionDrag === 'resize') {
       this._redimensionarSeleccionConContenido(this.resizeHandle, x, y);
       this.startX = x;
@@ -2148,7 +1536,6 @@ class SelectionManagerCP {
 
   _onPointerUp(e) {
     if (!this.activo) return;
-
     if (this.isSelecting) {
       this.isSelecting = false;
       let { x, y, w, h } = this.seleccion;
@@ -2162,7 +1549,6 @@ class SelectionManagerCP {
       }
       return;
     }
-
     if (this.selectionDrag) {
       this.selectionDrag = null;
       this.resizeHandle = null;
@@ -2253,7 +1639,7 @@ class SelectionManagerCP {
 }
 
 // ======================================================================
-// MÓDULO 4 – UI (con ambos selectores)
+// BLOQUE 6 – UI (INTEGRACIÓN FINAL)
 // ======================================================================
 (function UI() {
   const contenedor = Pizarra.getContenedor();
@@ -2327,12 +1713,6 @@ class SelectionManagerCP {
   const grosorBtnsGoma = document.querySelectorAll('#grosorGomaGrupo .grosor-btn');
   const swatchesFondo = document.querySelectorAll('#coloresFondo .color-swatch');
 
-  // Instancias independientes
-  // Pinta, dentro de un rectángulo, el fondo "real" tal como se ve en el
-  // tablero (color de fondo + la imagen importada si está activa). Se usa
-  // para la vista previa al mover/redimensionar una selección, así el
-  // hueco que va dejando se ve igual que el fondo verdadero, en vez de un
-  // parche de color plano que taparía un PDF importado.
   function pintarFondoRealEnRect(ctx, x, y, w, h) {
     ctx.save();
     ctx.beginPath();
@@ -2357,7 +1737,6 @@ class SelectionManagerCP {
     handleSize: 12,
   });
 
-  // ===== Toggles =====
   let grupo1Contraido = false, grupo2Contraido = false;
   toggleGrupo1.addEventListener('click', function(e) {
     e.stopPropagation();
@@ -2374,7 +1753,6 @@ class SelectionManagerCP {
   });
   toggleGrupo2.addEventListener('touchstart', function(e) { e.preventDefault(); this.click(); }, { passive: false });
 
-  // ===== Cerrar paneles =====
   function cerrarPaneles() {
     document.querySelectorAll('.floating-panel').forEach(p => {
       if (p.id === 'panelSeleccionCP' && selectorCP.activo && selectorCP.seleccion) return;
@@ -2404,9 +1782,7 @@ class SelectionManagerCP {
     }
   }
 
-  // ===== Activar herramienta =====
   function setTool(tool, btn) {
-    // CP: selección unificada (mover, redimensionar, copiar, pegar, eliminar)
     if (tool === 'cp') {
       const isActive = btn.classList.contains('activo');
       if (isActive) {
@@ -2424,13 +1800,11 @@ class SelectionManagerCP {
       return;
     }
 
-    // Si CP está activo, desactivarlo
     if (selectorCP.activo) {
       selectorCP.desactivar();
       btnCP.classList.remove('activo');
     }
 
-    // Resto de herramientas
     if (tool === 'lapiz' && btnLapiz.classList.contains('activo')) {
       togglePanel(btnLapiz, panelLapiz);
       return;
@@ -2469,10 +1843,6 @@ class SelectionManagerCP {
     Pizarra.actualizarBotonesHistorial();
   }
 
-  // ===== Proceso: ProcesoActivarLapizTemporal =====
-  // Activa la herramienta de anotación temporal (capa efímera, no forma
-  // parte del historial de deshacer/rehacer). Un segundo clic con la
-  // herramienta ya activa solo abre/cierra el panel de colores.
   function ProcesoActivarLapizTemporal() {
     const isActive = btnLapizTemporal.classList.contains('activo');
     if (isActive) {
@@ -2490,14 +1860,10 @@ class SelectionManagerCP {
     posicionarPanel(btnLapizTemporal, panelLapizTemporal);
   }
 
-  // ===== Proceso: ProcesoLimpiarLapizTemporal =====
-  // Borra únicamente lo dibujado con el lápiz temporal (capa efímera),
-  // sin afectar el contenido principal ni el historial.
   function ProcesoLimpiarLapizTemporal() {
     Pizarra.limpiarTemporal();
   }
 
-  // ===== Proceso: desactivar visualmente el lápiz temporal =====
   function desactivarVisualLapizTemporal() {
     if (btnLapizTemporal.classList.contains('activo')) {
       btnLapizTemporal.classList.remove('activo');
@@ -2506,7 +1872,6 @@ class SelectionManagerCP {
     }
   }
 
-  // ===== Enlace de botones =====
   function bindButton(btn, handler) {
     btn.addEventListener('click', handler);
     btn.addEventListener('touchstart', function(e) { e.preventDefault(); this.click(); }, { passive: false });
@@ -2521,25 +1886,10 @@ class SelectionManagerCP {
   bindButton(btnFondo, () => setTool('fondo', btnFondo));
   bindButton(btnGrid, () => { const est = Pizarra.toggleGrid(); btnGrid.classList.toggle('activo', est); });
   bindButton(btnMover, () => { if (btnMover.classList.contains('activo')) setTool('lapiz', btnLapiz); else setTool('mover', btnMover); });
-  // --- Botones de Zoom con actualización del indicador ---
-  bindButton(btnZoomIn, () => {
-    Pizarra.zoomIn();
-    actualizarIndicadorZoom();
-  });
-  bindButton(btnZoomOut, () => {
-    Pizarra.zoomOut();
-    actualizarIndicadorZoom();
-  });
+  bindButton(btnZoomIn, () => { Pizarra.zoomIn(); actualizarIndicadorZoom(); });
+  bindButton(btnZoomOut, () => { Pizarra.zoomOut(); actualizarIndicadorZoom(); });
 
-  // ======================================================================
-  // PROCESO: ProcesoRestablecerVista
-  // Primer clic: guarda la vista actual (zoom + posición) y la restablece
-  // al tamaño/ubicación inicial (zoom 1, sin desplazamiento — la misma
-  // vista "de fábrica" con la que arranca el Pizarrón 2).
-  // Segundo clic: restaura la vista que tenías justo antes de resetear.
-  // ======================================================================
   let vistaGuardadaAntesDeReset = null;
-
   function ProcesoRestablecerVista() {
     if (vistaGuardadaAntesDeReset === null) {
       vistaGuardadaAntesDeReset = Pizarra.getTransform();
@@ -2562,8 +1912,6 @@ class SelectionManagerCP {
   bindButton(btnLapizTemporal, () => ProcesoActivarLapizTemporal());
   bindButton(btnBorrarTemporal, () => ProcesoLimpiarLapizTemporal());
 
-  // ===== Regla: activar cualquier herramienta del menú vertical =====
-  // borra automáticamente lo dibujado con el lápiz temporal.
   barraLateral.addEventListener('click', e => {
     if (e.target.closest('.btn-icon')) {
       Pizarra.limpiarTemporal();
@@ -2571,7 +1919,6 @@ class SelectionManagerCP {
     }
   });
 
-  // ===== Selección de color del lápiz temporal =====
   coloresLapizTemporal.forEach(sw => {
     sw.addEventListener('click', e => {
       e.stopPropagation();
@@ -2583,7 +1930,6 @@ class SelectionManagerCP {
     sw.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); sw.click(); }, { passive: false });
   });
 
-  // ===== Acciones del panel CP =====
   function bindActionCP(btn, actionFn) {
     btn.addEventListener('pointerdown', function(e) {
       e.preventDefault();
@@ -2602,17 +1948,12 @@ class SelectionManagerCP {
   bindActionCP(btnCopiarCP, () => selectorCP.copiar());
   bindActionCP(btnCortarCP, () => selectorCP.cortar());
   bindActionCP(btnPegarCP, () => {
-    selectorCP.pegar(() => {
-      setTool('lapiz', btnLapiz);
-    });
+    selectorCP.pegar(() => { setTool('lapiz', btnLapiz); });
   });
   bindActionCP(btnEliminarCP, () => {
-    selectorCP.eliminar(() => {
-      setTool('lapiz', btnLapiz);
-    });
+    selectorCP.eliminar(() => { setTool('lapiz', btnLapiz); });
   });
 
-  // ===== Configuración lápiz, resaltador, fondo =====
   colorSwatchesLapiz.forEach(sw => {
     sw.addEventListener('click', e => { e.stopPropagation(); Pizarra.setColor(sw.dataset.color); colorSwatchesLapiz.forEach(s => s.classList.remove('seleccionado')); sw.classList.add('seleccionado'); cerrarPaneles(); });
     sw.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); sw.click(); }, { passive: false });
@@ -2638,20 +1979,12 @@ class SelectionManagerCP {
     sw.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); sw.click(); }, { passive: false });
   });
 
-  // ===== Cerrar paneles al clic fuera =====
   document.addEventListener('pointerdown', e => {
     if (!e.target.closest('.floating-panel') && !e.target.closest('.btn-icon')) {
       cerrarPaneles();
     }
   });
 
-  // ======================================================================
-  // PROCESO: ProcesoImprimirPizarra (VERSIÓN FUNCIONAL EXTRAÍDA DE index_0.html)
-  // Genera una vista de impresión limpia (sin barras ni controles),
-  // usando el contenido actual del canvas principal, con marca de autoría.
-  // ======================================================================
-  // [REEMPLAZO COMPLETO DE LAS FUNCIONES DE IMPRESIÓN]
-  // ======================================================================
   function ProcesoGuardarPaginaActual() {
     if (!paginas[paginaActivaIndex]) return;
     paginas[paginaActivaIndex].dibujo = Pizarra.getCanvasPrincipal().toDataURL('image/png');
@@ -2659,10 +1992,7 @@ class SelectionManagerCP {
   }
 
   function ProcesoImprimirPizarra() {
-    // Asegurar que la página visible en este momento quede guardada en el
-    // arreglo de páginas antes de armar la impresión completa.
     ProcesoGuardarPaginaActual();
-
     const anchoCanvas = Pizarra.W;
     const altoCanvas = Pizarra.H;
     const fecha = new Date().toLocaleDateString('es-EC', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -2753,7 +2083,6 @@ class SelectionManagerCP {
     }
 
     paginas.forEach((pagina, index) => {
-      // Lienzo temporal por página: fondo sólido + dibujo (por si hay transparencia)
       const canvasExport = document.createElement('canvas');
       canvasExport.width = anchoCanvas;
       canvasExport.height = altoCanvas;
@@ -2788,9 +2117,6 @@ class SelectionManagerCP {
         }
       };
 
-      // El fondo importado (PDF), si esta página tiene uno y el interruptor
-      // está activado, se dibuja debajo del contenido, igual que se ve en
-      // el Pizarrón 1.
       if (pagina.fondoImagen && mostrarFondoImagenGlobal) {
         const imgFondo = new Image();
         imgFondo.onload = () => { ctxExport.drawImage(imgFondo, 0, 0); dibujarContenidoYTerminar(); };
@@ -2800,17 +2126,8 @@ class SelectionManagerCP {
       }
     });
   }
-  // ===== FIN DE REEMPLAZO DE IMPRESIÓN =====
 
-  // ======================================================================
-  // PROCESO: ProcesoInstalarPWA
-  // El ícono aparece en cuanto el candado está activado (sin esperar a que
-  // el navegador dispare su propio aviso de instalación). Al pulsarlo: si
-  // el navegador ya tiene lista la instalación nativa, la dispara; si aún
-  // no, explica por qué (y qué revisar) en vez de no hacer nada.
-  // ======================================================================
   let eventoInstalacionDiferido = null;
-
   function mostrarBotonInstalarSiCorresponde() {
     const activado = typeof window.estaActivado === 'function' && window.estaActivado();
     if (activado) {
@@ -2844,11 +2161,6 @@ class SelectionManagerCP {
     console.log('✅ Pizarrón instalado como aplicación.');
   });
 
-  // ======================================================================
-  // PROCESO: RegistroServiceWorker
-  // Habilita el uso sin conexión y es requisito técnico para que el
-  // navegador considere la app "instalable".
-  // ======================================================================
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./service-worker.js')
@@ -2856,12 +2168,6 @@ class SelectionManagerCP {
     });
   }
 
-  // ======================================================================
-  // MÓDULO: GestorCuaderno
-  // Permite trabajar con varias "hojas" (páginas) tipo pestañas, y guardar/
-  // abrir el cuaderno completo como un archivo .job (JSON), de modo que
-  // se pueda cerrar el navegador y retomar el trabajo después.
-  // ======================================================================
   let paginas = [];
   let paginaActivaIndex = 0;
   let contadorPaginas = 0;
@@ -2872,8 +2178,8 @@ class SelectionManagerCP {
     return {
       nombre: nombre || ('Pág. ' + contadorPaginas),
       fondo: '#d9e8f5',
-      dibujo: null, // dataURL PNG del contenido; null = página en blanco
-      fondoImagen: null // dataURL PNG de una diapositiva/página de PDF importada, o null
+      dibujo: null,
+      fondoImagen: null
     };
   }
 
@@ -2892,14 +2198,6 @@ class SelectionManagerCP {
     checkFondoImagen.checked = mostrarFondoImagenGlobal;
   }
 
-  // Guarda el contenido actual del lienzo dentro de los datos de la página activa
-  function ProcesoGuardarPaginaActual() {
-    if (!paginas[paginaActivaIndex]) return;
-    paginas[paginaActivaIndex].dibujo = Pizarra.getCanvasPrincipal().toDataURL('image/png');
-    paginas[paginaActivaIndex].fondo = Pizarra.getColorFondo();
-  }
-
-  // Carga en el lienzo el contenido guardado de la página indicada
   function ProcesoCargarPagina(index) {
     const pagina = paginas[index];
     if (!pagina) return;
@@ -2911,7 +2209,6 @@ class SelectionManagerCP {
     Pizarra.mostrarFondoImagen(mostrarFondoImagenGlobal);
     actualizarBotonInterruptorFondoImagen();
 
-    // Limpiar lápiz temporal al cambiar de hoja (es efímero, no pertenece a ninguna página)
     Pizarra.limpiarTemporal();
     desactivarVisualLapizTemporal();
 
@@ -2985,7 +2282,6 @@ class SelectionManagerCP {
     barraPestanas.appendChild(btnNueva);
   }
 
-  // ===== Guardar cuaderno completo como archivo .job =====
   function ProcesoGuardarCuaderno() {
     ProcesoGuardarPaginaActual();
     const cuaderno = {
@@ -3008,7 +2304,6 @@ class SelectionManagerCP {
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
-  // ===== Abrir cuaderno desde archivo .job (compatible también con .pizarra) =====
   function ProcesoAbrirCuaderno(file) {
     if (!file) return;
     const lector = new FileReader();
@@ -3045,31 +2340,19 @@ class SelectionManagerCP {
     inputAbrirCuaderno.value = '';
   });
 
-  // ======================================================================
-  // MÓDULO: ImportarPDF
-  // Importa un PDF y convierte cada una de sus páginas en el fondo de una
-  // hoja nueva del cuaderno (una página del PDF = una página del cuaderno).
-  // Ese fondo es independiente del color de fondo y del dibujo: se puede
-  // mostrar u ocultar con el interruptor, sin perder nada de lo dibujado.
-  // ======================================================================
   if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
 
-  // Dibuja una página del PDF a buena resolución y la encaja (sin
-  // deformarla) dentro del tablero de 1200x700, centrada, con los
-  // márgenes transparentes para que se siga viendo el color de fondo.
   function renderizarPaginaPDF(paginaPdf) {
     return new Promise((resolve, reject) => {
       const viewportBase = paginaPdf.getViewport({ scale: 1 });
       const escala = 1600 / Math.max(viewportBase.width, viewportBase.height);
       const viewport = paginaPdf.getViewport({ scale: escala });
-
       const canvasTemp = document.createElement('canvas');
       canvasTemp.width = viewport.width;
       canvasTemp.height = viewport.height;
       const ctxTemp = canvasTemp.getContext('2d');
-
       paginaPdf.render({ canvasContext: ctxTemp, viewport }).promise.then(() => {
         const W = Pizarra.W, H = Pizarra.H;
         const escalaEncaje = Math.min(W / canvasTemp.width, H / canvasTemp.height);
@@ -3077,13 +2360,11 @@ class SelectionManagerCP {
         const altoFinal = canvasTemp.height * escalaEncaje;
         const x = (W - anchoFinal) / 2;
         const y = (H - altoFinal) / 2;
-
         const canvasFinal = document.createElement('canvas');
         canvasFinal.width = W;
         canvasFinal.height = H;
         const ctxFinal = canvasFinal.getContext('2d');
         ctxFinal.drawImage(canvasTemp, x, y, anchoFinal, altoFinal);
-
         resolve(canvasFinal.toDataURL('image/png'));
       }).catch(reject);
     });
@@ -3105,15 +2386,13 @@ class SelectionManagerCP {
     try {
       const buffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-
       const imagenesNuevas = [];
       for (let i = 1; i <= pdf.numPages; i++) {
         const paginaPdf = await pdf.getPage(i);
         const imagen = await renderizarPaginaPDF(paginaPdf);
         imagenesNuevas.push(imagen);
       }
-
-      ProcesoGuardarPaginaActual(); // no perder lo que estabas trabajando
+      ProcesoGuardarPaginaActual();
       const indicePrimeraNueva = paginas.length;
       const nombreBase = file.name.replace(/\.pdf$/i, '');
       imagenesNuevas.forEach((imagen, i) => {
@@ -3139,16 +2418,11 @@ class SelectionManagerCP {
     inputImportarPDF.value = '';
   });
 
-  // ===== Interruptor: mostrar/ocultar el fondo importado =====
   checkFondoImagen.addEventListener('change', () => {
     mostrarFondoImagenGlobal = checkFondoImagen.checked;
     Pizarra.mostrarFondoImagen(mostrarFondoImagenGlobal);
   });
 
-  // ======================================================================
-  // PROCESO: ProcesoToggleBarraSuperior
-  // Contrae/expande el menú horizontal para liberar espacio en pantalla.
-  // ======================================================================
   function ProcesoToggleBarraSuperior() {
     const contraido = iconosBarraSuperior.classList.toggle('contraida');
     btnToggleBarraSuperior.classList.toggle('contraido', contraido);
@@ -3157,10 +2431,6 @@ class SelectionManagerCP {
   }
   bindButton(btnToggleBarraSuperior, () => ProcesoToggleBarraSuperior());
 
-  // ======================================================================
-  // PROCESO: ProcesoPantallaCompleta
-  // Activa/desactiva el modo de pantalla completa del navegador.
-  // ======================================================================
   function ProcesoPantallaCompleta() {
     const elemento = document.documentElement;
     const enPantallaCompleta = document.fullscreenElement || document.webkitFullscreenElement;
@@ -3188,19 +2458,8 @@ class SelectionManagerCP {
   document.addEventListener('fullscreenchange', actualizarIconoPantallaCompleta);
   document.addEventListener('webkitfullscreenchange', actualizarIconoPantallaCompleta);
 
-  // ===== Herramienta "Neutro" =====
-  // Botón en blanco: al activarlo, ninguna herramienta de dibujo queda
-  // seleccionada. El lienzo no reacciona a clics ni trazos: es un estado
-  // de "pausa" para mover la vista o simplemente no dibujar por accidente.
   bindButton(btnNeutro, () => setTool('neutro', btnNeutro));
 
-  // ======================================================================
-  // PROCESO: ProcesoAjustarPantalla
-  // Escala todo el pizarrón (menús + hoja + pestañas) para que quepa por
-  // completo en la ventana visible, sin importar el tamaño de pantalla.
-  // Así se elimina la necesidad de cualquier deslizador (scroll) del
-  // sistema, tanto vertical como horizontal.
-  // ======================================================================
   const pizarraWrapper = document.querySelector('.pizarra-wrapper');
   let anchoNaturalWrapper = null;
   let altoNaturalWrapper = null;
@@ -3215,10 +2474,10 @@ class SelectionManagerCP {
       pizarraWrapper.style.transform = transformPrevia;
     }
 
-    const margen = 16; // pequeño respiro para que no quede pegado a los bordes
+    const margen = 16;
     const escalaAncho = (window.innerWidth - margen) / anchoNaturalWrapper;
     const escalaAlto = (window.innerHeight - margen) / altoNaturalWrapper;
-    const escala = Math.min(1, escalaAncho, escalaAlto); // nunca agranda más allá del 100%
+    const escala = Math.min(1, escalaAncho, escalaAlto);
 
     pizarraWrapper.style.transform = `scale(${escala})`;
   }
@@ -3228,7 +2487,6 @@ class SelectionManagerCP {
   window.addEventListener('load', ProcesoAjustarPantalla);
   ProcesoAjustarPantalla();
 
-  // ===== Título con fecha actual (versión) =====
   (function actualizarTituloConFecha() {
     const hoy = new Date();
     const dd = String(hoy.getDate()).padStart(2, '0');
@@ -3237,19 +2495,12 @@ class SelectionManagerCP {
     document.title = `Pizarra JoB [v: ${dd}/${mm}/${yyyy}]`;
   })();
 
-  // ======================================================================
-  // MÓDULO: Lupa (efecto de aumento circular)
-  // Muestra, mientras se arrastra el dedo/mouse con la herramienta activa,
-  // un círculo de radio ~2cm con una vista aumentada de esa zona exacta
-  // del pizarrón (fondo + dibujo + lápiz temporal + cuadrícula).
-  // ======================================================================
-  const LUPA_RADIO_CM = 2.5; // se aumentó 0.5cm (antes 2cm)
-  const PX_POR_CM = 37.8; // aproximación estándar: 96px/pulgada ÷ 2.54cm/pulgada
-  const LUPA_RADIO_PX = Math.round(LUPA_RADIO_CM * PX_POR_CM); // ≈ 76px
+  const LUPA_RADIO_CM = 2.5;
+  const PX_POR_CM = 37.8;
+  const LUPA_RADIO_PX = Math.round(LUPA_RADIO_CM * PX_POR_CM);
   const LUPA_DIAMETRO_PX = LUPA_RADIO_PX * 2;
-  const LUPA_ZOOM = 2.2; // cuánto se aumenta el contenido dentro de la lupa
+  const LUPA_ZOOM = 2.2;
 
-  // Tamaño físico del lente (constante, independiente del zoom del lienzo)
   lupaOverlay.style.width = LUPA_DIAMETRO_PX + 'px';
   lupaOverlay.style.height = LUPA_DIAMETRO_PX + 'px';
   lupaCanvas.width = LUPA_DIAMETRO_PX;
@@ -3269,7 +2520,6 @@ class SelectionManagerCP {
   }
   bindButton(btnLupa, () => ProcesoActivarLupa());
 
-  // Si se activa cualquier otra herramienta del menú vertical, ocultar la lupa
   barraLateral.addEventListener('click', () => {
     if (!btnLupa.classList.contains('activo')) {
       lupaOverlay.style.display = 'none';
@@ -3289,26 +2539,22 @@ class SelectionManagerCP {
     } else {
       cx = e.clientX; cy = e.clientY;
     }
-    const xLocal = (cx - rect.left) * scaleX; // posición dentro del contenedor (para ubicar el lente)
+    const xLocal = (cx - rect.left) * scaleX;
     const yLocal = (cy - rect.top) * scaleY;
     const { zoom, panX, panY } = Pizarra.getTransform();
-    const xCanvas = (xLocal - panX) / zoom; // posición real en el lienzo (para recortar el contenido)
+    const xCanvas = (xLocal - panX) / zoom;
     const yCanvas = (yLocal - panY) / zoom;
     return { xLocal, yLocal, xCanvas, yCanvas };
   }
 
   function dibujarLupa(xCanvas, yCanvas) {
     const { zoom } = Pizarra.getTransform();
-    // Si el lienzo ya está con zoom aplicado, cada píxel del canvas ocupa
-    // más (o menos) espacio en pantalla; hay que compensarlo para que el
-    // aumento de la lupa sea siempre el mismo, sin importar el zoom del lienzo.
     const radioFuente = LUPA_RADIO_PX / (LUPA_ZOOM * zoom);
     const sx = xCanvas - radioFuente;
     const sy = yCanvas - radioFuente;
     const s = radioFuente * 2;
 
     ctxLupa.clearRect(0, 0, LUPA_DIAMETRO_PX, LUPA_DIAMETRO_PX);
-    // Se recompone en el mismo orden visual: fondo → dibujo → lápiz temporal → cuadrícula
     [Pizarra.getCanvasFondo(), Pizarra.getCanvasPrincipal(), Pizarra.getCanvasTemporal(), Pizarra.getCanvasGrid()]
       .forEach(capa => ctxLupa.drawImage(capa, sx, sy, s, s, 0, 0, LUPA_DIAMETRO_PX, LUPA_DIAMETRO_PX));
     return radioFuente;
@@ -3319,8 +2565,6 @@ class SelectionManagerCP {
     lupaOverlay.style.left = (xLocal - LUPA_RADIO_PX) + 'px';
     lupaOverlay.style.top = (yLocal - LUPA_RADIO_PX) + 'px';
     const radioFuente = dibujarLupa(xCanvas, yCanvas);
-    // Transmitir al Pizarrón 2, para que la lupa también se vea allá
-    // (esta herramienta es justamente para interactuar con los estudiantes).
     if (typeof emitirLupa === 'function') emitirLupa(xCanvas, yCanvas, radioFuente, true);
   }
 
@@ -3349,32 +2593,15 @@ class SelectionManagerCP {
   window.addEventListener('mouseup', lupaPointerUp);
   window.addEventListener('touchend', lupaPointerUp);
 
-  // ======================================================================
-  // MÓDULO: PizarronEspejo
-  // Sincroniza el contenido y un marcador de posición con una segunda
-  // pestaña ("Pizarrón 2"), pensada para mostrar a los estudiantes una
-  // vista limpia mientras el profesor trabaja cómodamente en el Pizarrón 1.
-  // ======================================================================
-  const CM_A_PX = 37.795; // aproximación estándar 96dpi (1cm ≈ 37.795 px)
-  const MARCADOR_ANCHO_TABLERO = 6 * CM_A_PX;   // 6cm de largo (horizontal) — duplicado
-  const MARCADOR_ALTO_TABLERO = 1.5 * CM_A_PX;  // 1.5cm de ancho (vertical)
-
+  const CM_A_PX = 37.795;
+  const MARCADOR_ANCHO_TABLERO = 6 * CM_A_PX;
+  const MARCADOR_ALTO_TABLERO = 1.5 * CM_A_PX;
   const CANAL_SYNC = 'pizarron-jb-sync';
   const CLAVE_CONTENIDO = 'pizarron_jb_sync_contenido';
   const CLAVE_MARCADOR = 'pizarron_jb_sync_marcador';
-
   const canalSync = ('BroadcastChannel' in window) ? new BroadcastChannel(CANAL_SYNC) : null;
   let marcadorVisible = false;
-
-  // ======================================================================
-  // Detección automática de si el Pizarrón 2 sigue abierto ("latido").
-  // Mientras no haya un Pizarrón 2 activo, NO se hace ningún trabajo de
-  // sincronización (ni componer imagen, ni tocar localStorage, ni
-  // transmitir) — así se evita cualquier costo en equipos más modestos
-  // (p. ej. pantallas táctiles de aula) cuando nadie está mirando la
-  // segunda pantalla.
-  // ======================================================================
-  const UMBRAL_INACTIVIDAD_P2 = 12000; // ms sin señal del Pizarrón 2 = se da por cerrado
+  const UMBRAL_INACTIVIDAD_P2 = 12000;
   let pizarron2Activo = false;
   let ultimaSenalP2 = 0;
 
@@ -3382,18 +2609,12 @@ class SelectionManagerCP {
     ultimaSenalP2 = Date.now();
     if (!pizarron2Activo) {
       pizarron2Activo = true;
-      // Recién detectado (o recién reconectado): manda el estado completo
-      // de inmediato, sin esperar al próximo trazo.
       emitirContenidoCompleto(false);
       if (marcadorVisible) emitirMarcadorCompleto();
     }
   }
-  function marcarPizarron2Inactivo() {
-    pizarron2Activo = false;
-  }
+  function marcarPizarron2Inactivo() { pizarron2Activo = false; }
   function forzarPizarron2Activo() {
-    // Usado por acciones explícitas del profesor (abrir / actualizar),
-    // para que funcionen de inmediato sin esperar el próximo latido.
     pizarron2Activo = true;
     ultimaSenalP2 = Date.now();
   }
@@ -3407,21 +2628,12 @@ class SelectionManagerCP {
     };
   }
 
-  // Vigilante: si no llega señal del Pizarrón 2 en un buen rato, se asume
-  // cerrado (cubre el caso de que la pestaña se haya cerrado de golpe,
-  // sin avisar).
   setInterval(() => {
     if (pizarron2Activo && (Date.now() - ultimaSenalP2 > UMBRAL_INACTIVIDAD_P2)) {
       marcarPizarron2Inactivo();
     }
   }, 4000);
 
-  // Compone fondo + dibujo + lápiz temporal en una sola imagen plana,
-  // igual que se hace para imprimir: así el Pizarrón 2 solo necesita
-  // mostrar una <img>, sin tener que recomponer capas.
-  // modoRapido=true → JPEG de calidad media (rápido, para actualizaciones
-  // en vivo mientras se traza). modoRapido=false → PNG (calidad completa,
-  // para el resultado final de cada trazo).
   function generarImagenPlanaActual(modoRapido, callback) {
     const canvasExport = document.createElement('canvas');
     canvasExport.width = Pizarra.W;
@@ -3438,12 +2650,9 @@ class SelectionManagerCP {
   }
 
   function emitirContenidoCompleto(modoRapido) {
-    if (!pizarron2Activo) return; // nadie mirando: no se hace ningún trabajo
-    // setTimeout(...,0): cede el turno al navegador para que primero
-    // termine de pintar el trazo en curso, y recién después componga/
-    // codifique la imagen — evita que esto se sienta en el trazo.
+    if (!pizarron2Activo) return;
     setTimeout(() => {
-      if (!pizarron2Activo) return; // pudo desconectarse durante la espera
+      if (!pizarron2Activo) return;
       generarImagenPlanaActual(modoRapido, (imagen) => {
         const datos = {
           tipo: 'contenido',
@@ -3453,17 +2662,15 @@ class SelectionManagerCP {
           totalPaginas: paginas.length
         };
         if (canalSync) canalSync.postMessage(datos);
-        // El localStorage (síncrono y más costoso) solo se usa para la
-        // versión final de calidad completa, no en cada actualización viva.
         if (!modoRapido) {
-          try { localStorage.setItem(CLAVE_CONTENIDO, JSON.stringify(datos)); } catch (e) { /* almacenamiento no disponible */ }
+          try { localStorage.setItem(CLAVE_CONTENIDO, JSON.stringify(datos)); } catch (e) {}
         }
       });
     }, 0);
   }
 
   function emitirMarcadorCompleto() {
-    if (!pizarron2Activo) return; // nadie mirando: no se hace ningún trabajo
+    if (!pizarron2Activo) return;
     const centro = Pizarra.getPuntoDeCentroEnTablero();
     const datos = {
       tipo: 'marcador',
@@ -3473,20 +2680,14 @@ class SelectionManagerCP {
       ts: Date.now()
     };
     if (canalSync) canalSync.postMessage(datos);
-    try { localStorage.setItem(CLAVE_MARCADOR, JSON.stringify(datos)); } catch (e) { /* almacenamiento no disponible */ }
+    try { localStorage.setItem(CLAVE_MARCADOR, JSON.stringify(datos)); } catch (e) {}
   }
 
-  // Transmite la posición/estado de la lupa al Pizarrón 2, para que los
-  // estudiantes vean el mismo efecto de aumento mientras el profesor
-  // señala algo — es justamente el propósito de esta herramienta.
-  // No se guarda en localStorage (posición muy efímera, cambia decenas de
-  // veces por segundo); solo viaja por el canal en vivo.
   function emitirLupa(x, y, radioFuente, visible) {
     if (!pizarron2Activo) return;
     if (canalSync) canalSync.postMessage({ tipo: 'lupa', x, y, radioFuente, visible, ts: Date.now() });
   }
 
-  // Dibuja (o esconde) el marcador también en el propio Pizarrón 1
   function dibujarMarcadorLocal() {
     ctxMarcador.clearRect(0, 0, Pizarra.W, Pizarra.H);
     if (!marcadorVisible) {
@@ -3509,7 +2710,6 @@ class SelectionManagerCP {
     ctxMarcador.restore();
   }
 
-  // ===== Conectar los hooks del módulo Pizarra =====
   Pizarra.setOnCambioContenido(() => emitirContenidoCompleto(false));
   Pizarra.setOnCambioTransform(() => {
     if (!marcadorVisible) return;
@@ -3517,20 +2717,13 @@ class SelectionManagerCP {
     emitirMarcadorCompleto();
   });
 
-  // Mientras se está trazando (pincel, resaltador, lápiz temporal, formas...)
-  // se transmite periódicamente en modo rápido (JPEG, sin localStorage),
-  // para que el Pizarrón 2 vea el trazo avanzar casi en vivo. Si no hay
-  // Pizarrón 2 activo, emitirContenidoCompleto no hace absolutamente nada.
   setInterval(() => {
     if (Pizarra.estaDibujando()) emitirContenidoCompleto(true);
   }, 150);
 
-  // ===== Botón: Abrir Pizarrón 2 en otra pestaña =====
   function ProcesoAbrirPizarron2() {
     window.open('pizarron2.html', '_blank');
     forzarPizarron2Activo();
-    // Pequeño respiro y luego reenviar el estado completo, para que la
-    // pestaña recién abierta reciba contenido aunque llegue tarde al canal.
     setTimeout(() => {
       emitirContenidoCompleto(false);
       emitirMarcadorCompleto();
@@ -3538,7 +2731,6 @@ class SelectionManagerCP {
   }
   bindButton(btnAbrirPizarron2, () => ProcesoAbrirPizarron2());
 
-  // ===== Botón: Actualizar (fuerza reenvío) + mostrar/ocultar marcador =====
   function ProcesoActualizarYMarcador() {
     marcadorVisible = !marcadorVisible;
     btnActualizarMarcador.classList.toggle('activo', marcadorVisible);
@@ -3549,13 +2741,6 @@ class SelectionManagerCP {
   }
   bindButton(btnActualizarMarcador, () => ProcesoActualizarYMarcador());
 
-  // ======================================================================
-  // PROCESO: ProcesoMoverVista
-  // Desplaza la vista del tablero por pasos exactos, usando el tamaño del
-  // rectángulo marcador como referencia (y escalando con el zoom actual,
-  // para que el paso se sienta igual de "grande" a cualquier nivel de zoom).
-  // Horizontal: 3/4 del largo del rectángulo. Vertical: un ancho completo.
-  // ======================================================================
   function ProcesoMoverVista(dx, dy) {
     const { zoom } = Pizarra.getTransform();
     Pizarra.moverVista(dx * zoom, dy * zoom);
@@ -3565,7 +2750,6 @@ class SelectionManagerCP {
   bindButton(btnMoverArriba, () => ProcesoMoverVista(0, MARCADOR_ALTO_TABLERO));
   bindButton(btnMoverAbajo, () => ProcesoMoverVista(0, -MARCADOR_ALTO_TABLERO));
 
-  // ===== Función para actualizar el indicador de zoom =====
   function actualizarIndicadorZoom() {
     const zoom = Pizarra.getTransform().zoom;
     const porcentaje = Math.round(zoom * 100);
@@ -3585,16 +2769,14 @@ class SelectionManagerCP {
   [toggleGrupo1, toggleGrupo2].forEach(t => t.querySelector('i:first-child').className = 'fas fa-chevron-down');
   selectorCP.actualizarBotonesPanel();
 
-  // El cuaderno arranca con una sola página en blanco (la que ya está dibujada)
   paginas = [crearPaginaVacia('Pág. 1')];
   paginaActivaIndex = 0;
   RenderizarPestanas();
   actualizarBotonInterruptorFondoImagen();
-
-  // Inicializar el indicador de zoom
   actualizarIndicadorZoom();
 
   console.log('✅ Versión con CP (Copiar/Cortar), impresión reparada e indicador de zoom.');
+  console.log('✅ Integración con backend de activaciones activa.');
 })();
 </script>
 </body>
