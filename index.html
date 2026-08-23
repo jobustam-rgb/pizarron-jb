@@ -175,6 +175,8 @@
           <span class="interruptor-riel"><span class="interruptor-bola"></span></span>
         </label>
         <div class="separador-vertical"></div>
+        <button class="btn-icon" id="btnPegarImagen" title="Pegar imagen del portapapeles (Ctrl+C) — requiere activación" disabled><i class="fas fa-clipboard"></i></button>
+        <div class="separador-vertical"></div>
         <button class="btn-icon" id="btnPantallaCompleta" title="Modo pantalla completa"><i class="fas fa-expand"></i></button>
         <div class="separador-vertical"></div>
         <button class="btn-icon" id="btnAbrirPizarron2" title="Abrir Pizarrón 2 (vista para estudiantes)"><i class="fas fa-chalkboard-teacher"></i></button>
@@ -352,9 +354,11 @@
     const btnImportarPDF = document.getElementById('btnImportarPDF');
     const interruptorFondoImagen = document.getElementById('interruptorFondoImagen');
     const checkFondoImagen = document.getElementById('checkFondoImagen');
+    const btnPegarImagen = document.getElementById('btnPegarImagen');
     btnImportarPDF.disabled = !activado;
     interruptorFondoImagen.classList.toggle('deshabilitado', !activado);
     checkFondoImagen.disabled = !activado;
+    if (btnPegarImagen) btnPegarImagen.disabled = !activado;
     btnActivacion.querySelector('i').className = activado ? 'fas fa-unlock' : 'fas fa-lock';
     btnActivacion.classList.toggle('activo', activado);
     if (activado && typeof mostrarBotonInstalarSiCorresponde === 'function') {
@@ -440,7 +444,7 @@ function procesarRegistro(id, clave) {
   fetch(URL_BACKEND, {
     method: 'POST',
     mode: 'cors',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
   .then(res => {
@@ -484,7 +488,7 @@ function mostrarFormularioRegistro(id) {
   fetch(URL_BACKEND, {
     method: 'POST',
     mode: 'cors',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
   .then(res => res.json())
@@ -517,7 +521,9 @@ function mostrarMensaje(texto) {
 function mostrarFuncionesPremium() {
   const btnPDF = document.getElementById('btnImportarPDF');
   const btnInstalar = document.getElementById('btnInstalarApp');
+  const btnPegarImagen = document.getElementById('btnPegarImagen');
   if (btnPDF) btnPDF.disabled = false;
+  if (btnPegarImagen) btnPegarImagen.disabled = false;
   if (btnInstalar) btnInstalar.style.display = 'inline-flex';
   const separador = document.getElementById('separadorInstalar');
   if (separador) separador.style.display = 'block';
@@ -1270,6 +1276,8 @@ class SelectionManagerCP {
     });
     this.guardarEstado = opciones.guardarEstado || (() => {});
     this.handleSize = opciones.handleSize || 12;
+    this.handleSizeGrande = this.handleSize * 2; // un solo nodo (esquina) más fácil de tomar
+    this.handleGrandeId = 'br'; // esquina inferior derecha; el resto sigue igual
     this.getTransform = opciones.getTransform || (() => ({ panX: 0, panY: 0, zoom: 1 }));
 
     this.ctxP = this.canvasP.getContext('2d');
@@ -1406,9 +1414,15 @@ class SelectionManagerCP {
     const handles = this._getHandles(x, y, w, h);
     this.ctxT.save();
     this.ctxT.fillStyle = '#2c6b9e';
-    handles.forEach(h => {
-      this.ctxT.fillRect(h.x - this.handleSize/2, h.y - this.handleSize/2,
-                         this.handleSize, this.handleSize);
+    handles.forEach(hd => {
+      const esGrande = hd.id === this.handleGrandeId;
+      const tam = esGrande ? this.handleSizeGrande : this.handleSize;
+      this.ctxT.fillRect(hd.x - tam/2, hd.y - tam/2, tam, tam);
+      if (esGrande) {
+        this.ctxT.strokeStyle = '#ffffff';
+        this.ctxT.lineWidth = 2;
+        this.ctxT.strokeRect(hd.x - tam/2, hd.y - tam/2, tam, tam);
+      }
     });
     this.ctxT.restore();
     if (this.panel) {
@@ -1686,6 +1700,7 @@ class SelectionManagerCP {
   const inputImportarPDF = document.getElementById('inputImportarPDF');
   const interruptorFondoImagen = document.getElementById('interruptorFondoImagen');
   const checkFondoImagen = document.getElementById('checkFondoImagen');
+  const btnPegarImagen = document.getElementById('btnPegarImagen');
   const barraPestanas = document.getElementById('barraPestanas');
   const btnInstalarApp = document.getElementById('btnInstalarApp');
   const separadorInstalar = document.getElementById('separadorInstalar');
@@ -2417,6 +2432,80 @@ class SelectionManagerCP {
     ProcesoImportarPDF(file);
     inputImportarPDF.value = '';
   });
+
+  // ======================================================================
+  // PROCESO: ProcesoPegarImagen
+  // Pega una imagen tomada del portapapeles del sistema (Ctrl+C clásico,
+  // por ejemplo una captura de pantalla o una imagen copiada desde otra
+  // página), directamente sobre el dibujo de la página actual. Botón
+  // nuevo e independiente: no toca nada de lo ya construido (Importar
+  // PDF, Selección/CP, etc.), y queda gateado por la misma activación.
+  // ======================================================================
+  async function ProcesoPegarImagen() {
+    if (typeof window.estaActivado === 'function' && !window.estaActivado()) {
+      alert('Esta función requiere activación. Usa el candado en el menú superior para ingresar tu código.');
+      return;
+    }
+    if (!navigator.clipboard || !navigator.clipboard.read) {
+      alert('Tu navegador no permite leer imágenes del portapapeles. Prueba con Chrome o Edge actualizado, sobre HTTPS.');
+      return;
+    }
+
+    const iconoOriginal = btnPegarImagen.innerHTML;
+    btnPegarImagen.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btnPegarImagen.disabled = true;
+
+    try {
+      const items = await navigator.clipboard.read();
+      let blobImagen = null;
+      for (const item of items) {
+        const tipoImagen = item.types.find(t => t.startsWith('image/'));
+        if (tipoImagen) {
+          blobImagen = await item.getType(tipoImagen);
+          break;
+        }
+      }
+      if (!blobImagen) {
+        alert('No se encontró ninguna imagen en el portapapeles. Copia una imagen (Ctrl+C) e inténtalo de nuevo.');
+        return;
+      }
+
+      const url = URL.createObjectURL(blobImagen);
+      await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const ctxP = Pizarra.getCanvasPrincipal().getContext('2d');
+          const W = Pizarra.W, H = Pizarra.H;
+          // Encaja la imagen dentro del 80% del tablero, centrada, sin deformarla
+          const maxW = W * 0.8, maxH = H * 0.8;
+          const escala = Math.min(maxW / img.width, maxH / img.height);
+          const anchoFinal = img.width * escala;
+          const altoFinal = img.height * escala;
+          const x = (W - anchoFinal) / 2;
+          const y = (H - altoFinal) / 2;
+          ctxP.drawImage(img, x, y, anchoFinal, altoFinal);
+          Pizarra.guardarEstado();
+          URL.revokeObjectURL(url);
+          resolve();
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
+    } catch (err) {
+      console.error(err);
+      if (err && err.name === 'NotAllowedError') {
+        alert('El navegador bloqueó el acceso al portapapeles. Vuelve a intentarlo y acepta el permiso cuando lo pida.');
+      } else {
+        alert('No se pudo pegar la imagen. Verifica que hayas copiado una imagen recientemente (Ctrl+C).');
+      }
+    } finally {
+      btnPegarImagen.innerHTML = iconoOriginal;
+      const sigueActivado = typeof window.estaActivado === 'function' && window.estaActivado();
+      btnPegarImagen.disabled = !sigueActivado;
+    }
+  }
+
+  bindButton(btnPegarImagen, () => ProcesoPegarImagen());
 
   checkFondoImagen.addEventListener('change', () => {
     mostrarFondoImagenGlobal = checkFondoImagen.checked;
